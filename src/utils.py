@@ -458,9 +458,11 @@ def test_single_camera():
 
     
 if __name__ == "__main__":
-    import ssh_request
+    # import ssh_request
     # import stereo_camera.stereo
-    test_without_ssh()
+    # test_without_ssh()
+    test_single_camera()
+    
 
     
     
