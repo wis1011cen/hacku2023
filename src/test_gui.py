@@ -15,6 +15,6 @@ window.close()
 
 # from playsound import playsound
 # playsound("fanfare.mp3")
-utils.test_single_camera()
+utils.test()
 
 print(f'eventは{event}')

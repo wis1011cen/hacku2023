@@ -3,30 +3,33 @@ import mediapipe as mp
 import numpy as np
 import time
 
-L_DURATION = 0.5
-L_COOL_TIME = 1
+L_DURATION = 1
+L_COOL_TIME = 5
 R_DURATION = 1
 R_COOL_TIME = 2
 DEGREE_THRESHOLD = 120
 VISIBILITY_THRESHOLD = 0.6
+OPERATION_DISPLAY_TIME = 0.7
 
-start_time = [{'tv': 0, 'ac': 0},{'tv': 0, 'ac': 0}]    #LR
+start_time = [{'tv': 0, 'fan': 0}, {'tv': 0, 'fan': 0}]    #LR
 
-ac_mode = 0
-ssh_time = 0
+# ac_mode = 0
+operation_time = 0
 pre_wrist_pos = np.zeros(2)
 pre_name = None
+operation_name = None
 
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence = 0.8, min_tracking_confidence = 0.5)
 
 def detect_pose(frame, objects_pos):
-    global start_time
-    
+    global start_time, operation_time
+
     # 推論
     frame.flags.writeable = False
     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame.flags.writeable = True
+   
    
     landmarker = results.pose_landmarks
     
@@ -43,6 +46,12 @@ def detect_pose(frame, objects_pos):
         # 右手
         if r_visibility > VISIBILITY_THRESHOLD:
             arm_operation(rshoulder_pos, relbow_pos, rwrist_pos, 1, objects_pos, frame)
+        
+    if operation_name is not None and (time.time() - operation_time) < OPERATION_DISPLAY_TIME:
+        cv2.putText(frame, operation_name, (0, 60), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
+       
+    
+    
      
     return frame
 
@@ -76,13 +85,13 @@ def draw_landmark(frame, landmarker):
             lwrist_pos = lm_pos
     
             l_visibility = landmark.visibility
-            cv2.putText(frame, f'L:{l_visibility:.2f}', (500, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 3, 4)
+            cv2.putText(frame, f'L:{l_visibility:.2f}', (0, 200), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 3, 4)
         elif i == 16:                   #右手首
             color = (255, 255, 0)
             rwrist_pos = lm_pos
             
             r_visibility = landmark.visibility
-            cv2.putText(frame, f'R:{r_visibility:.2f}', (500, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 3, 4)
+            cv2.putText(frame, f'R:{r_visibility:.2f}', (0, 250), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 3, 4)
             
         if i >= 11 and i <= 16:    
             cv2.putText(frame, f'{landmark.z:.1f}', lm_pos, cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2, 4)
@@ -151,11 +160,11 @@ def calculate_degree(vec_a, vec_b):
     
 # 左腕で電源ON
 def l_ir_operation(frame, wrist_pos, obj_dict, vec_b):
-    global start_time, ssh_time, ac_mode
+    global start_time, operation_time
     ex_pos = wrist_pos + 20 * vec_b    #腕を伸ばした先
     color = (255, 0, 0)
     
-    if (time.time() - ssh_time) > L_COOL_TIME or ssh_time == 0:
+    if (time.time() - operation_time) > L_COOL_TIME or operation_time == 0:
         for name, obj_pos in obj_dict.items():
             color = (255, 0, 0)
             
@@ -171,15 +180,8 @@ def l_ir_operation(frame, wrist_pos, obj_dict, vec_b):
                     # 一定時間以上交わったとき
                     if duration_time > L_DURATION: 
                         end = 'on'
-                        if name == 'ac':
-                            if ac_mode == 0:
-                                ac_mode = 1
-                            else:
-                                end = 'off'
-                                ac_mode = 0
-                            print('lightning')
-                            #ir_lightning(17, )
-                            #send_ssh(frame, name, end, 0, client)
+                        ir_operation(name, end, 0)
+
                         
                         duration_time = 0
                             
@@ -193,10 +195,10 @@ def l_ir_operation(frame, wrist_pos, obj_dict, vec_b):
     
 # 右腕:チャンネル変更 
 def r_ir_operation(frame, wrist_pos, obj_dict, vec_b):
-    global start_time, ssh_time, ac_mode, pre_wrist_pos, pre_name
+    global start_time, operation_time, ac_mode, pre_wrist_pos, pre_name
     ex_pos = wrist_pos + 20 * vec_b    #腕を伸ばした先
     color = (255, 0, 0)
-    if (time.time() - ssh_time) > R_COOL_TIME or ssh_time == 0:
+    if (time.time() - operation_time) > R_COOL_TIME or operation_time == 0:
         for name, obj_pos in obj_dict.items():
             color = (255, 0, 0)
             # 線分が交わるか判定
@@ -224,32 +226,23 @@ def r_ir_operation(frame, wrist_pos, obj_dict, vec_b):
         if not hit_detection(wrist_pos, ex_pos, obj_pos):
             end = 'up' if wrist_pos[1] < pre_wrist_pos[1] else 'down'
             
-            #send_ssh(frame, pre_name, end, 1, client)
-            print(lightning)
+            ir_operation(pre_name, end, 1)
+            
             pre_name = None
             
     cv2.line(frame, wrist_pos, ex_pos, color, 2)
+  
+import ir.irrp as irrp
+
+def ir_operation(name, end, is_right):
+    global operation_time, operation_name
+    operation_name = f'{name}-{end}'
     
-'''
-def send_ssh(frame, name, end, is_right, client):
-    global ssh_time
-    name = f'{name}-{end}'
-    cv2.putText(frame, name, (0, 60), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
-    
-    # すぐに表示
-    cv2.imshow('video', frame)
-    cv2.waitKey(1)
-    
-    t = time.time()
-    if client is not None:
-        ssh_request.ir_lighting(client, name)
-    else:
-        print('ssh is not connected.')
-    ssh_time = time.time()
-    print(f'ssh time:{time.time()-t}')
+    irrp.ir_lightning(operation_name)
+
+    operation_time = time.time()
     
     start_time[is_right][name] = 0
-'''
                         
     
 # 操作対象と線の当たり判定
@@ -286,25 +279,28 @@ def cross_detection(pos_a, pos_b, pos_c, pos_d):
         return True
     else:
         return False
+ 
     
-    
-def test_single_camera():
+def test():
     WIDTH = 640
-    HEIGHT = 480
+    HEIGHT = 360
+    scale = 1
+    cap = cv2.VideoCapture(0)
 
-    cap = cv2.VideoCapture(1)
+
+    if not (cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH) and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)):
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        scale = 2
+  
+    obj_dict = {'tv':(0, 200*scale, 100*scale, 160*scale), 'fan':(550*scale, 260*scale, 90*scale, 100*scale)}
+        
+    print(f'resolution:{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}')
     
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    
-    print(f'FPS:{fps}')
-    print(f'resolution:{WIDTH}x{HEIGHT}')
-    
-    # x,y,w,h
-    obj_dict = {'tv':(400, 400, 280, 200), 'ac':(200, 0, 200, 100)}
-    tv_pos, ac_pos = obj_dict.values()
+    tv_pos, fan_pos = obj_dict.values()
     
     tv_x, tv_y, tv_w, tv_h = tv_pos
-    ac_x, ac_y, ac_w, ac_h = ac_pos 
+    fan_x, fan_y, fan_w, fan_h = fan_pos 
     
     
     if not cap.isOpened():
@@ -326,11 +322,11 @@ def test_single_camera():
         if not ret:
             print('error')
             break
-       
         frame = detect_pose(frame, obj_dict)
+
         
         cv2.rectangle(frame, (tv_x, tv_y), (tv_x + tv_w, tv_y + tv_h), (0, 0, 255), 2)
-        cv2.rectangle(frame, (ac_x, ac_y), (ac_x + ac_w, ac_y + ac_h), (0, 0, 255), 2)
+        cv2.rectangle(frame, (fan_x, fan_y), (fan_x + fan_w, fan_y + fan_h), (0, 0, 255), 2)
         cv2.putText(frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
         cv2.imshow('video', frame)
         
@@ -344,10 +340,7 @@ def test_single_camera():
 
     
 if __name__ == "__main__":
-    # import ssh_requests
-    # import stereo_camera.stereo
-    #test_without_ssh()
-    test_single_camera()
+    test()
     
 
     
