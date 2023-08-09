@@ -435,6 +435,7 @@ def test_single_camera():
     
     
     if cap.isOpened():
+        pre_t = time.time()
         while True:
             ret, frame = cap.read()
             
