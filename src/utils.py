@@ -290,18 +290,19 @@ def cross_detection(pos_a, pos_b, pos_c, pos_d):
     
     
 def test():
-    WIDTH = 640
-    HEIGHT = 480
+    WIDTH = 640*2
+    HEIGHT = 360*2
 
     cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FPS, 15)
     
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, HEIGHT)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
     
     #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
   
-    #print(f'FPS:{fps}')
-    #print(f'resolution:{width}x{HEIGHT}')
+    print(f'FPS:{cap.get(cv2.CAP_PROP_FPS)}')
+    print(f'resolution:{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}')
     
     # x,y,w,h
     obj_dict = {'tv':(0, 400, 280, 200), 'fan':(1000, 0, 200, 100)}
