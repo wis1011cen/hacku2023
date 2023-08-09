@@ -2,7 +2,6 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
-# import src.ssh_request as ssh_request
 
 L_DURATION = 0.5
 L_COOL_TIME = 1
@@ -11,19 +10,17 @@ R_COOL_TIME = 2
 DEGREE_THRESHOLD = 120
 VISIBILITY_THRESHOLD = 0.6
 
-start_time = [{'tv1': 0, 'tv2': 0},{'tv1': 0, 'tv2': 0}]    #LR
+start_time = [{'tv': 0, 'ac': 0},{'tv': 0, 'ac': 0}]    #LR
 
 ac_mode = 0
 ssh_time = 0
 pre_wrist_pos = np.zeros(2)
 pre_name = None
 
-
-
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(min_detection_confidence = 0.8, min_tracking_confidence = 0.5)
 
-def detect_pose(frame, depth_map, objects_pos, client):
+def detect_pose(frame, objects_pos):
     global start_time
     
     # 推論
@@ -33,31 +30,30 @@ def detect_pose(frame, depth_map, objects_pos, client):
     
    
     landmarker = results.pose_landmarks
-    #print(start_time)
     
     if not landmarker:
         start_time = [{name : 0 for name in start_time[0].keys()}, {name : 0 for name in start_time[1].keys()}]
     else:
-        lshoulder_pos, lelbow_pos, lwrist_pos, l_visibility, rshoulder_pos, relbow_pos, rwrist_pos, r_visibility= draw_landmark(frame, depth_map, landmarker)
+        lshoulder_pos, lelbow_pos, lwrist_pos, l_visibility, rshoulder_pos, relbow_pos, rwrist_pos, r_visibility= draw_landmark(frame, landmarker)
         draw_line(frame, landmarker)
         
         # 左手
         if l_visibility > VISIBILITY_THRESHOLD:
-            arm_operation(lshoulder_pos, lelbow_pos, lwrist_pos, 0, objects_pos, frame, client)
+            arm_operation(lshoulder_pos, lelbow_pos, lwrist_pos, 0, objects_pos, frame)
         
         # 右手
         if r_visibility > VISIBILITY_THRESHOLD:
-            arm_operation(rshoulder_pos, relbow_pos, rwrist_pos, 1, objects_pos, frame, client)
+            arm_operation(rshoulder_pos, relbow_pos, rwrist_pos, 1, objects_pos, frame)
      
     return frame
 
 
 # ランドマークの位置に点を打つ
-def draw_landmark(frame, depth_map, landmarker):
+def draw_landmark(frame, landmarker):
     height, width = frame.shape[:2]
     
     for i, landmark in enumerate(landmarker.landmark):
-        lm_pos = np.array([int(landmark.x * width), int(landmark.y * height)])  
+        lm_pos = np.array([int(landmark.x * width), int(landmark.y * height)])
         
             
         if i == 11:                     #左肩
@@ -67,7 +63,7 @@ def draw_landmark(frame, depth_map, landmarker):
         elif i == 12:                   #右肩
             color = (255, 255, 0)
             rshoulder_pos = lm_pos
-       
+         
         elif i == 13:                   #左肘
             color = (0, 255, 255)
             lelbow_pos = lm_pos
@@ -79,28 +75,24 @@ def draw_landmark(frame, depth_map, landmarker):
         elif i == 15:                   #左手首
             color = (0, 255, 255)
             lwrist_pos = lm_pos
+    
             l_visibility = landmark.visibility
             cv2.putText(frame, f'L:{l_visibility:.2f}', (500, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 3, 4)
         elif i == 16:                   #右手首
             color = (255, 255, 0)
             rwrist_pos = lm_pos
+            
             r_visibility = landmark.visibility
             cv2.putText(frame, f'R:{r_visibility:.2f}', (500, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 3, 4)
+            
+        if i >= 11 and i <= 16:    
+            cv2.putText(frame, f'{landmark.z:.1f}', lm_pos, cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2, 4)
         else:
             color = (0, 255, 0)
-            
-        try:
-            depth = depth_map[lm_pos[1], lm_pos[0]]
-            cv2.putText(frame, f'{depth}', lm_pos, cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2, 4)
-            
-        except (IndexError, TypeError):
-            pass
-           
+     
         cv2.circle(frame, lm_pos, 5, color, -1)
         
-        
-    
-   
+
     return lshoulder_pos, lelbow_pos, lwrist_pos, l_visibility, rshoulder_pos, relbow_pos, rwrist_pos, r_visibility
 
 
@@ -126,7 +118,7 @@ def draw_line(frame, landmarker):
         cv2.line(frame, lm_pos1, lm_pos2, (255, 0, 0), 2)
         
 
-def arm_operation(pos1, pos2, pos3, is_right_arm, objects_pos, frame, client):
+def arm_operation(pos1, pos2, pos3, is_right_arm, objects_pos, frame):
     global start_time
     vec_a = pos1 - pos2
     vec_b = pos3 - pos2
@@ -134,9 +126,9 @@ def arm_operation(pos1, pos2, pos3, is_right_arm, objects_pos, frame, client):
         
     if degree > DEGREE_THRESHOLD:
         if is_right_arm == 0:
-            l_ir_operation(frame, pos3, objects_pos, vec_b, client)
+            l_ir_operation(frame, pos3, objects_pos, vec_b)
         else:
-            r_ir_operation(frame, pos3, objects_pos, vec_b, client)
+            r_ir_operation(frame, pos3, objects_pos, vec_b)
     else:
         if is_right_arm == 0:        # 左腕
             start_time[0] = {name : 0 for name in start_time[0].keys()}
@@ -156,14 +148,14 @@ def calculate_degree(vec_a, vec_b):
     rad = np.arccos(cos)
     return  np.rad2deg(rad)
 
-
+#from ir.irrp import ir_lightning
     
 # 左腕で電源ON
-def l_ir_operation(frame, wrist_pos, obj_dict, vec_b, client):
+def l_ir_operation(frame, wrist_pos, obj_dict, vec_b):
     global start_time, ssh_time, ac_mode
     ex_pos = wrist_pos + 20 * vec_b    #腕を伸ばした先
     color = (255, 0, 0)
-    #print(pre_wrist_pos)
+    
     if (time.time() - ssh_time) > L_COOL_TIME or ssh_time == 0:
         for name, obj_pos in obj_dict.items():
             color = (255, 0, 0)
@@ -186,8 +178,8 @@ def l_ir_operation(frame, wrist_pos, obj_dict, vec_b, client):
                             else:
                                 end = 'off'
                                 ac_mode = 0
-                        # if client is not None:
-                            send_ssh(frame, name, end, 0, client)
+                            print('lightning')
+                            #send_ssh(frame, name, end, 0, client)
                         
                         duration_time = 0
                             
@@ -200,7 +192,7 @@ def l_ir_operation(frame, wrist_pos, obj_dict, vec_b, client):
     cv2.line(frame, wrist_pos, ex_pos, color, 2)
     
 # 右腕:チャンネル変更 
-def r_ir_operation(frame, wrist_pos, obj_dict, vec_b, client):
+def r_ir_operation(frame, wrist_pos, obj_dict, vec_b):
     global start_time, ssh_time, ac_mode, pre_wrist_pos, pre_name
     ex_pos = wrist_pos + 20 * vec_b    #腕を伸ばした先
     color = (255, 0, 0)
@@ -232,11 +224,13 @@ def r_ir_operation(frame, wrist_pos, obj_dict, vec_b, client):
         if not hit_detection(wrist_pos, ex_pos, obj_pos):
             end = 'up' if wrist_pos[1] < pre_wrist_pos[1] else 'down'
             
-            send_ssh(frame, pre_name, end, 1, client)
+            #send_ssh(frame, pre_name, end, 1, client)
+            print(lightning)
             pre_name = None
             
     cv2.line(frame, wrist_pos, ex_pos, color, 2)
- 
+    
+'''
 def send_ssh(frame, name, end, is_right, client):
     global ssh_time
     name = f'{name}-{end}'
@@ -255,6 +249,7 @@ def send_ssh(frame, name, end, is_right, client):
     print(f'ssh time:{time.time()-t}')
     
     start_time[is_right][name] = 0
+'''
                         
     
 # 操作対象と線の当たり判定
@@ -293,133 +288,11 @@ def cross_detection(pos_a, pos_b, pos_c, pos_d):
         return False
     
     
-
-def test():
-    with ssh_request.connect() as client:
-
-        cap = cv2.VideoCapture(0)
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        print(f'FPS:{fps}')
-        print(f'resolution:{width}x{height}')
-        
-        # x,y,w,h
-        obj_dict = {'tv':(1000, 400, 280, 200), 'ac':(200, 0, 200, 100)}
-        tv_pos, ac_pos = obj_dict.values()
-        
-        tv_x, tv_y, tv_w, tv_h = tv_pos
-        ac_x, ac_y, ac_w, ac_h = ac_pos 
-
-        if cap.isOpened():
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    continue
-                
-                
-                frame = cv2.flip(frame, 1)
-                frame = detect_pose(frame, obj_dict, client)
-                
-                cv2.rectangle(frame, (tv_x, tv_y), (tv_x + tv_w, tv_y + tv_h), (0, 0, 255), 2)
-                cv2.rectangle(frame, (ac_x, ac_y), (ac_x + ac_w, ac_y + ac_h), (0, 0, 255), 2)
-                
-                
-                cv2.imshow('video', frame)
-                
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q') or key == ord('Q') or key == 0x1b:
-                    break
-                    
-            
-            cap.release()
-
-def test_without_ssh():
-    # import stereo_camera.stereo as stereo
-    import stereo
-    
-    L_CAMERA_DEVISE = 0
-    R_CAMERA_DEVICE = 1 
-    WIDTH = 640
-    HEIGHT = 480
-    # cap = cv2.VideoCapture(0)
-    capl = cv2.VideoCapture(L_CAMERA_DEVISE)
-    capr = cv2.VideoCapture(R_CAMERA_DEVICE)
-
-    capl.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-    capl.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
-    capr.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-    capr.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
-
-    capl.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-    capr.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-    capl.set(cv2.CAP_PROP_EXPOSURE, -5)
-    capr.set(cv2.CAP_PROP_EXPOSURE, -5)
-    
-    fps = int(capl.get(cv2.CAP_PROP_FPS))
-    
-    print(f'FPS:{fps}')
-    print(f'resolution:{WIDTH}x{HEIGHT}')
-    
-    # x,y,w,h
-    obj_dict = {'tv':(1000, 400, 280, 200), 'ac':(200, 0, 200, 100)}
-    tv_pos, ac_pos = obj_dict.values()
-    
-    tv_x, tv_y, tv_w, tv_h = tv_pos
-    ac_x, ac_y, ac_w, ac_h = ac_pos 
-    
-    map1_l, map2_l, map1_r, map2_r, wls_filter, left_matcher, right_matcher = stereo.load_caliblation_data(WIDTH, HEIGHT)
-
-    if capl.isOpened():
-        while True:
-            retl, framel = capl.read()
-            retr, framer = capr.read()
-            
-            if not retl or not retr:
-                continue
-            
-            framel_gray, framer_gray, depth_map = stereo.depth_estimate(framel, framer, map1_l, map2_l, map1_r, map2_r, wls_filter, left_matcher, right_matcher)
-            
-            # print('max', np.max(filtered_frame) , 'min', np.min(filtered_frame))
-            # max_idx = np.argmax(filtered_frame)
-            # min_idx = np.argmin(filtered_frame)
-            max_idx = np.unravel_index(np.argmax(depth_map), depth_map.shape)
-            min_idx = np.unravel_index(np.argmin(depth_map), depth_map.shape)
-            # print(idx)
-            # print(max_idx, min_idx)
-            
-            THRESHOLD = -1000
-            filtered_frame = np.where(depth_map < THRESHOLD, THRESHOLD, depth_map)
-            filtered_frame = np.where(filtered_frame > 1000, 1000, filtered_frame)
-            
-            filtered_frame = cv2.normalize(src=filtered_frame, dst=filtered_frame, beta=0, alpha=255, norm_type=cv2.NORM_MINMAX)
-            filtered_frame = np.uint8(filtered_frame)
-            # print(filtered_frame.)
-            # print('max_', filtered_frame[max_idx], 'min_', filtered_frame[min_idx])
-            # cv2.imshow("Disparity", filtered_frame)
-            # framel = cv2.flip(framel, 1)
-            framel = detect_pose(framel, depth_map, obj_dict, client = None)
-            
-            cv2.rectangle(framel, (tv_x, tv_y), (tv_x + tv_w, tv_y + tv_h), (0, 0, 255), 2)
-            cv2.rectangle(framel, (ac_x, ac_y), (ac_x + ac_w, ac_y + ac_h), (0, 0, 255), 2)
-            
-            # cv2.imshow('video', framel)
-            filtered_frame = np.stack((filtered_frame,)*3, -1)
-            cv2.imshow('depth', cv2.hconcat([framel, filtered_frame]))
-            # cv2.imshow('stereo', cv2.hconcat([framel_gray, framer_gray, filtered_frame]))
-            
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q') or key == ord('Q') or key == 0x1b:
-                break
-                
-        
-        capl.release()
-        
 def test_single_camera():
     WIDTH = 640
     HEIGHT = 480
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     
@@ -427,40 +300,53 @@ def test_single_camera():
     print(f'resolution:{WIDTH}x{HEIGHT}')
     
     # x,y,w,h
-    obj_dict = {'tv':(1000, 400, 280, 200), 'ac':(200, 0, 200, 100)}
+    obj_dict = {'tv':(400, 400, 280, 200), 'ac':(200, 0, 200, 100)}
     tv_pos, ac_pos = obj_dict.values()
     
     tv_x, tv_y, tv_w, tv_h = tv_pos
     ac_x, ac_y, ac_w, ac_h = ac_pos 
     
     
-    if cap.isOpened():
-        while True:
-            ret, frame = cap.read()
-            
-            if not ret:
-                continue
-           
-            frame = detect_pose(frame, None, obj_dict, client = None)
-            
-            cv2.rectangle(frame, (tv_x, tv_y), (tv_x + tv_w, tv_y + tv_h), (0, 0, 255), 2)
-            cv2.rectangle(frame, (ac_x, ac_y), (ac_x + ac_w, ac_y + ac_h), (0, 0, 255), 2)
-            
-            cv2.imshow('video', frame)
-            
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q') or key == ord('Q') or key == 0x1b:
-                break
-                
+    if not cap.isOpened():
+        print('Cannot open a camera')
+        return 1
+    
+    pre_t = time.time()
+    while True:
+        t = time.time() - pre_t
+        pre_t = time.time()
         
-        cap.release()
+        try:
+            fps = 1/t
+        except ZeroDivisionError:
+            fps = 0
+            
+        ret, frame = cap.read()
+        
+        if not ret:
+            print('error')
+            break
+       
+        frame = detect_pose(frame, obj_dict)
+        
+        cv2.rectangle(frame, (tv_x, tv_y), (tv_x + tv_w, tv_y + tv_h), (0, 0, 255), 2)
+        cv2.rectangle(frame, (ac_x, ac_y), (ac_x + ac_w, ac_y + ac_h), (0, 0, 255), 2)
+        cv2.putText(frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        cv2.imshow('video', frame)
+        
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+            
+    cv2.destroyAllWindows()
+    cap.release()
         
 
     
 if __name__ == "__main__":
-    # import ssh_request
+    # import ssh_requests
     # import stereo_camera.stereo
-    # test_without_ssh()
+    #test_without_ssh()
     test_single_camera()
     
 
