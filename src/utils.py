@@ -27,7 +27,6 @@ def detect_pose(frame, objects_pos):
     frame.flags.writeable = False
     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame.flags.writeable = True
-    
    
     landmarker = results.pose_landmarks
     
@@ -179,6 +178,7 @@ def l_ir_operation(frame, wrist_pos, obj_dict, vec_b):
                                 end = 'off'
                                 ac_mode = 0
                             print('lightning')
+                            #ir_lightning(17, )
                             #send_ssh(frame, name, end, 0, client)
                         
                         duration_time = 0
