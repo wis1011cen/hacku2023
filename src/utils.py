@@ -338,8 +338,8 @@ def test_without_ssh():
     # import stereo_camera.stereo as stereo
     import stereo
     
-    L_CAMERA_DEVISE = 0
-    R_CAMERA_DEVICE = 1 
+    L_CAMERA_DEVISE = 1
+    R_CAMERA_DEVICE = 3
     WIDTH = 640
     HEIGHT = 480
     # cap = cv2.VideoCapture(0)
@@ -460,8 +460,8 @@ def test_single_camera():
 if __name__ == "__main__":
     # import ssh_request
     # import stereo_camera.stereo
-    # test_without_ssh()
-    test_single_camera()
+    test_without_ssh()
+    #test_single_camera()
     
 
     
