@@ -24,12 +24,12 @@ pose = mp_pose.Pose(min_detection_confidence = 0.8, min_tracking_confidence = 0.
 
 def detect_pose(frame, objects_pos):
     global start_time, operation_time
-    
+
     # 推論
     frame.flags.writeable = False
     results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     frame.flags.writeable = True
-    
+   
    
     landmarker = results.pose_landmarks
     
@@ -180,13 +180,8 @@ def l_ir_operation(frame, wrist_pos, obj_dict, vec_b):
                     # 一定時間以上交わったとき
                     if duration_time > L_DURATION: 
                         end = 'on'
-                        # if name == 'ac':
-                        #     if ac_mode == 0:
-                        #         ac_mode = 1
-                        #     else:
-                        #         end = 'off'
-                        #         ac_mode = 0
                         ir_operation(name, end, 0)
+
                         
                         duration_time = 0
                             
@@ -237,17 +232,14 @@ def r_ir_operation(frame, wrist_pos, obj_dict, vec_b):
             
     cv2.line(frame, wrist_pos, ex_pos, color, 2)
   
-  
+import ir.irrp as irrp
 
 def ir_operation(name, end, is_right):
     global operation_time, operation_name
-    print('lightning')
-    #name = f'{name}-{end}'
     operation_name = f'{name}-{end}'
     
-    # あとで作る
-    #ir_lightning()
-    
+    irrp.ir_lightning(operation_name)
+
     operation_time = time.time()
     
     start_time[is_right][name] = 0
@@ -287,25 +279,25 @@ def cross_detection(pos_a, pos_b, pos_c, pos_d):
         return True
     else:
         return False
-    
+ 
     
 def test():
-    WIDTH = 640*2
-    HEIGHT = 360*2
-
+    WIDTH = 640
+    HEIGHT = 360
+    scale = 1
     cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FPS, 15)
-    
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
-    
-    #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+
+    if not (cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH) and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)):
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        scale = 2
   
-    print(f'FPS:{cap.get(cv2.CAP_PROP_FPS)}')
+    obj_dict = {'tv':(0, 200*scale, 100*scale, 160*scale), 'fan':(550*scale, 260*scale, 90*scale, 100*scale)}
+        
+
     print(f'resolution:{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}')
     
-    # x,y,w,h
-    obj_dict = {'tv':(0, 400, 280, 200), 'fan':(1000, 0, 200, 100)}
     tv_pos, fan_pos = obj_dict.values()
     
     tv_x, tv_y, tv_w, tv_h = tv_pos
@@ -331,8 +323,8 @@ def test():
         if not ret:
             print('error')
             break
-       
         frame = detect_pose(frame, obj_dict)
+
         
         cv2.rectangle(frame, (tv_x, tv_y), (tv_x + tv_w, tv_y + tv_h), (0, 0, 255), 2)
         cv2.rectangle(frame, (fan_x, fan_y), (fan_x + fan_w, fan_y + fan_h), (0, 0, 255), 2)
