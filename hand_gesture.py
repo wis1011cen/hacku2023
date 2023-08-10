@@ -12,7 +12,7 @@ def get_result(result: vision.GestureRecognizerResult, output_image: mp.Image, t
     if gestures:
         for hand, gesture in zip(handedness, gestures):
             gesture_dict[hand[0].category_name] = gesture[0].category_name
-    return gesture_dict
+    #return gesture_dict
 
 options = vision.GestureRecognizerOptions(
     num_hands=2,
