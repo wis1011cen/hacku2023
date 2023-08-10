@@ -66,6 +66,12 @@ while True:
     frame = cv2.flip(frame, 1)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     landmarker.detect_async(mp_image, frame_timestamp_ms)
+    # print(line_dict)
+    
+    for pos in landmark_dict.values():
+        cv2.circle(frame, pos, 5, (255, 0, 0), -1)
+    for lm_pos in line_dict.values():
+        cv2.line(frame, lm_pos[0], lm_pos[1], (255, 0, 0), 2)
 
     frame_timestamp_ms += 1
 
