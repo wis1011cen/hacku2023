@@ -21,7 +21,7 @@ import pigpio
 
 PRE_MS = 200
 PRE_US = PRE_MS  * 1000
-pi = pigpio.pi()
+pi = None
 GPIO = 18
 last_tick = 0
 fetching_code = False
@@ -35,8 +35,8 @@ TOLER_MIN =  (100 - TOLERANCE) / 100.0
 TOLER_MAX =  (100 + TOLERANCE) / 100.0
 FILE = 'codes'
 POST_US = 130 * 1000
-FREQ = 38.0
 GAP_S = 0.1
+FREQ = 38.0
 GLITCH = 100
 
 
@@ -247,7 +247,6 @@ def tidy(records):
 
 def end_of_code():
    global code, fetching_code
-   print('OK')
    if len(code) > SHORT:
       normalise(code)
       fetching_code = False
@@ -286,13 +285,12 @@ def cbf(gpio, level, tick):
          end_of_code()
          
 def ir_recording(id):
-    global fetching_code, code, GPIO
-    GPIO = 18
+    global fetching_code, code, pi
     
-    #pi = pigpio.pi() # Connect to Pi.
+    pi = pigpio.pi() # Connect to Pi.
 
-    #if not pi.connected:
-       #exit(0)
+    if not pi.connected:
+        exit(0)
 
     try:
         f = open(FILE, "r")
@@ -332,13 +330,14 @@ def ir_recording(id):
     
 def ir_lightning(id):
     print('lightning')
-    
-    #pi = pigpio.pi()
-    #if not pi.connected:
-    #   exit(0)
-       
+
     filename = 'ir/codes'
-    GPIO = 17
+    gpio = 17
+    
+    pi = pigpio.pi()
+    if not pi.connected:
+       exit(0)
+       
     try:
        f = open(filename, "r")
     except:
@@ -349,7 +348,7 @@ def ir_lightning(id):
 
     f.close()
 
-    pi.set_mode(GPIO, pigpio.OUTPUT) # IR TX connected to this GPIO.
+    pi.set_mode(gpio, pigpio.OUTPUT) # IR TX connected to this GPIO.
     pi.wave_add_new()
 
     emit_time = time.time()
@@ -371,7 +370,7 @@ def ir_lightning(id):
                 wave[i] = spaces_wid[ci]
             else: # Mark
                 if ci not in marks_wid:
-                    wf = carrier(GPIO, FREQ, ci)
+                    wf = carrier(gpio, FREQ, ci)
                     pi.wave_add_generic(wf)
                     marks_wid[ci] = pi.wave_create()
                 wave[i] = marks_wid[ci]
@@ -404,5 +403,5 @@ def ir_lightning(id):
     
     
 if __name__ == '__main__':
-    #ir_recording('tv-up')
-    ir_lightning('tv-on')
+    ir_recording('tv-down')
+    #ir_lightning('tv-on')
