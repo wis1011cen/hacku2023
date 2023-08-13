@@ -12,7 +12,6 @@ def main():
     parser.add_argument('--set', action='store_true') 
     args = parser.parse_args()
     
-    
     cap = cv2.VideoCapture(0)
         
     if not cap.isOpened():
@@ -25,6 +24,8 @@ def main():
 
     # print(f'FPS:{fps}')
     print(f'resolution:{width}x{height}')
+    
+    
     
     roi_dict = {}
     
