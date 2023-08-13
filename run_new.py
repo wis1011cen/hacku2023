@@ -52,7 +52,7 @@ def pose_detector_callback(result, output_frame, timestamp):
     global annotated_frame
     #pose_timestamp = timestamp
     #t = time.time()
-    # annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
+    annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
     height, width = annotated_frame.shape[:2]
     pose_landmarks_list = result.pose_landmarks
     for idx in range(len(pose_landmarks_list)):
@@ -79,6 +79,7 @@ def main():
     scale = 1
     
     cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FPS, 30)
 
     if not (cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH) and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)):
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -148,12 +149,8 @@ def main():
         # for name, (x,y,w,h) in roi_dict.items():
         #     cv2.putText(frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
         #     cv2.rectangle(frame, (x,y),(x+w, y+h), (0,0,255), 2)
-        #print('timestamp','list size',timestamp,len(annotated_frame_list))
-        #if gesture_timestamp >= show_timestamp and pose_timestamp >= show_timestamp:
-            #print('show',show_timestamp,gesture_timestamp, pose_timestamp)
+      
         cv2.imshow('frame', annotated_frame)
-        
-            #show_timestamp += 1
             
         
         timestamp += 1
@@ -162,7 +159,7 @@ def main():
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
-        annotated_frame = np.copy(frame)
+        #annotated_frame = np.copy(frame)
         
     cap.release()
     cv2.destroyAllWindows()
