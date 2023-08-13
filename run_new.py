@@ -12,20 +12,20 @@ import numpy as np
 # import argparse
 
 def gesture_recognizer_callback(result, output_frame, timestamp):
-    global annotated_frame
+    #global annotated_frame
     #gesture_timestamp = timestamp
     #t = time.time()
-    # annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
+    #annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
     gestures =  result.gestures
     handedness = result.handedness
     # hand_landmarks = 
-    multi_hand_landmarks_list = [multi_hand_landmarks for multi_hand_landmarks in result.hand_landmarks]
+    #multi_hand_landmarks_list = [multi_hand_landmarks for multi_hand_landmarks in result.hand_landmarks]
     
     gesture_dict = dict()
     if gestures:
         for i, (hand, gesture) in enumerate(zip(handedness, gestures)):
             gesture_dict[hand[0].category_name] = gesture[0].category_name
-            cv2.putText(annotated_frame, f'{hand[0].category_name}:{gesture[0].category_name}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            #cv2.putText(annotated_frame, f'{hand[0].category_name}:{gesture[0].category_name}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
             
 '''
@@ -68,7 +68,8 @@ def pose_detector_callback(result, output_frame, timestamp):
                                                solutions.drawing_styles.get_default_pose_landmarks_style())
    
     #print('pose', timestamp,time.time()-t)
-    
+#     cv2.imshow('frame', annotated_frame)
+#     cv2.waitKey(1)
 #annotated_frame = None
 #gesture_timestamp = 0
 #pose_timestamp=0
@@ -97,6 +98,7 @@ def main():
 
 
     print(f'resolution:{width}x{height}')
+    print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
     
     
     pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path='pose_landmarker_lite.task'),
@@ -133,32 +135,32 @@ def main():
         if not ret:
             print('error')
             break
-        frame = cv2.flip(frame, 1)
+        #frame = cv2.flip(frame, 1)
         
         
         mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         
         pose_detector.detect_async(mp_frame, timestamp)
-        # annotated_frame
-        gesture_recognizer.recognize_async(mp_frame, timestamp)
+        
+        #gesture_recognizer.recognize_async(mp_frame, timestamp)
         
         #print('timestamp',timestamp)
         
-        
-        cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        #print('FPS', fps)
+        #cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
         # for name, (x,y,w,h) in roi_dict.items():
         #     cv2.putText(frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
         #     cv2.rectangle(frame, (x,y),(x+w, y+h), (0,0,255), 2)
-      
-        cv2.imshow('frame', annotated_frame)
+
+       
             
         
-        timestamp += 1
         
-        
+        cv2.imshow('frame', annotated_frame)
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
+        timestamp += 1
         #annotated_frame = np.copy(frame)
         
     cap.release()
