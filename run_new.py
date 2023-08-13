@@ -12,20 +12,20 @@ import numpy as np
 # import argparse
 
 def gesture_recognizer_callback(result, output_frame, timestamp):
-    global annotated_frame
+    #global annotated_frame
     #gesture_timestamp = timestamp
     #t = time.time()
     # annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
     gestures =  result.gestures
     handedness = result.handedness
     # hand_landmarks = 
-    multi_hand_landmarks_list = [multi_hand_landmarks for multi_hand_landmarks in result.hand_landmarks]
+    #multi_hand_landmarks_list = [multi_hand_landmarks for multi_hand_landmarks in result.hand_landmarks]
     
     gesture_dict = dict()
     if gestures:
         for i, (hand, gesture) in enumerate(zip(handedness, gestures)):
             gesture_dict[hand[0].category_name] = gesture[0].category_name
-            cv2.putText(annotated_frame, f'{hand[0].category_name}:{gesture[0].category_name}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            #cv2.putText(annotated_frame, f'{hand[0].category_name}:{gesture[0].category_name}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
             
 '''

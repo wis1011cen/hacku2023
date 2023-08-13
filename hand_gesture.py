@@ -109,12 +109,11 @@ def get_result(result, output_image, timestamp):
         hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
         hand_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks])
 
-        mp_drawing.draw_landmarks(
-            annotated_frame,
-            hand_landmarks_proto,
-            mp_hands.HAND_CONNECTIONS,
-            mp_drawing_styles.get_default_hand_landmarks_style(),
-            mp_drawing_styles.get_default_hand_connections_style())
+        mp_drawing.draw_landmarks(annotated_frame,
+                                  hand_landmarks_proto,
+                                  mp_hands.HAND_CONNECTIONS,
+                                  mp_drawing_styles.get_default_hand_landmarks_style(),
+                                  mp_drawing_styles.get_default_hand_connections_style())
 
     
 
