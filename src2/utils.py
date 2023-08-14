@@ -8,7 +8,7 @@ L_COOL_TIME = 5
 R_DURATION = 1
 R_COOL_TIME = 2
 DEGREE_THRESHOLD = 120
-VISIBILITY_THRESHOLD = 0.6
+VISIBILITY_THRESHOLD = 0.7
 OPERATION_DISPLAY_TIME = 0.7
 
 start_time = [{'tv': 0, 'fan': 0}, {'tv': 0, 'fan': 0}]    #LR
@@ -25,21 +25,27 @@ def arm_operation(landmark_dict, frame, obj_dict, pre_gesture_dict):
     global start_time
     
     if landmark_dict['l_visibility'] > VISIBILITY_THRESHOLD:
+        #print(landmark_dict['l_visibility'])
         degree = calculate_degree(landmark_dict['l_shoulder'], landmark_dict['l_elbow'], landmark_dict['l_wrist'])
         if degree > DEGREE_THRESHOLD:
+            color = (0, 0, 255)
             l_ir_operation(frame, landmark_dict['l_wrist'], obj_dict, landmark_dict['l_elbow'], pre_gesture_dict['Left'])
         else:
+            color = (255, 0, 0)
             start_time[0] = {name : 0 for name in start_time[0].keys()}
+        #cv2.putText(frame, f'L:{degree:.0f}', (0, 100), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
    
     # # 右手
     elif landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
         degree = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
         if degree > DEGREE_THRESHOLD:
+            color = (0, 0, 255)
             r_ir_operation(frame, landmark_dict['r_wrist'], obj_dict, landmark_dict['r_elbow'], pre_gesture_dict['Right'])
         else:
-             start_time[1] = {name : 0 for name in start_time[0].keys()}
+            color = (255, 0, 0)
+            start_time[1] = {name : 0 for name in start_time[0].keys()}
          
-    #cv2.putText(frame, f'{degree:.0f}', (0, 0), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
+        #cv2.putText(frame, f'R:{degree:.0f}', (0, 150), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
         
         
 # 3点のなす角度を求める
@@ -60,6 +66,7 @@ def l_ir_operation(frame, wrist_pos, obj_dict, elbow_pos, l_pre_gesture):
     global start_time, operation_time
     extended_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
     color = (255, 0, 0)
+    
     
     if (time.time() - operation_time) > L_COOL_TIME or operation_time == 0:
         for name, obj_pos in obj_dict.items():
@@ -95,6 +102,7 @@ def r_ir_operation(frame, wrist_pos, obj_dict, elbow_pos, r_pre_gesture):
     global start_time, operation_time, pre_wrist_pos, pre_name
     ex_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
     color = (255, 0, 0)
+    #print(r_pre_gesture)
     if (time.time() - operation_time) > R_COOL_TIME or operation_time == 0:
         for name, obj_pos in obj_dict.items():
             color = (255, 0, 0)
@@ -109,8 +117,8 @@ def r_ir_operation(frame, wrist_pos, obj_dict, elbow_pos, r_pre_gesture):
                     # 一定時間以上交わったときの手首の位置と操作対象を記録
                     if duration_time > R_DURATION:
                         #r_gesture_dict[timestamp-50:]  
-                        print('r_ir_operation')
-                        print(r_pre_gesture)
+                        #print('r_ir_operation')
+                        #print(r_pre_gesture)
                         if r_pre_gesture == 'Thumb_Up':
                             end = 'up' 
                             ir_operation(name, end, 0, frame)
@@ -153,11 +161,11 @@ def r_ir_operation(frame, wrist_pos, obj_dict, elbow_pos, r_pre_gesture):
 # import ir.irrp as irrp
 
 def ir_operation(name, end, is_right, frame):
-    print('ir_operation')
+    #print('ir_operation')
     global operation_time, operation_name
     operation_name = f'{name}-{end}'
     print(operation_name)
-    cv2.putText(frame, operation_name, (0,100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)  
+    #cv2.putText(frame, operation_name, (0,100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)  
     
     # irrp.ir_lightning(operation_name)
 

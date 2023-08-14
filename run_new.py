@@ -36,7 +36,7 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
                 #l_gesture_dict[timestamp] = gesture
                 #l_pre_gesture = gesture
                 pre_gesture_dict['Left'] = gesture
-           
+            print(gesture)
             cv2.putText(annotated_frame, f'{gesture}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
             
@@ -105,7 +105,7 @@ def pose_detector_callback(result, output_frame, timestamp):
   
 def main():
     global annotated_frame, gesture_dict
-    scale = 2
+    scale = 1
     WIDTH = 640*scale
     HEIGHT = 360*scale
     
@@ -127,8 +127,9 @@ def main():
     print(f'resolution:{width}x{height}')
     print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
     
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_lite.task'
-    POSE_DETECTOR_MODEL = 'pose_landmarker_full.task'
+    #
+    POSE_DETECTOR_MODEL = 'pose_landmarker_lite.task'
+    #POSE_DETECTOR_MODEL = 'pose_landmarker_full.task'
     # POSE_DETECTOR_MODEL = 'pose_landmarker_heavy.task'
     
     
@@ -188,7 +189,7 @@ def main():
         #print('timestamp',timestamp)
         
         #print('FPS', fps)
-        cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        #cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
         for name, (x, y, w, h) in obj_dict.items():
             #print(x,y,w,h)
             cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
