@@ -143,9 +143,8 @@ def ir_operation(name, end, is_right, annotated_frame):
     #print('ir_operation')
     global operation_time, operation_name
     operation_name = f'{name}-{end}'
-    print(operation_name)
-    # cv2.putText(annotated_frame, operation_name, (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)  
     
+    print(operation_name)
     irrp.ir_lightning(operation_name)
 
     operation_time = time.time()
