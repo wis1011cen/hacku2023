@@ -6,13 +6,12 @@ from mediapipe.framework.formats import landmark_pb2
 import cv2
 import time
 import numpy as np
-# mp_hands = mp.solutions.hands
-# mp_drawing = mp.solutions.drawing_utils
-# mp_drawing_styles = mp.solutions.drawing_styles
+from src2 import utils
 # import argparse
 
+
 def gesture_recognizer_callback(result, output_frame, timestamp):
-    #global annotated_frame
+    global l_gesture_dict, r_gesture_dict
     #gesture_timestamp = timestamp
     #t = time.time()
     #annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
@@ -21,73 +20,91 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
     # hand_landmarks = 
     #multi_hand_landmarks_list = [multi_hand_landmarks for multi_hand_landmarks in result.hand_landmarks]
     
-    gesture_dict = dict()
+    gesture_list = list()
     if gestures:
         for i, (hand, gesture) in enumerate(zip(handedness, gestures)):
-            gesture_dict[hand[0].category_name] = gesture[0].category_name
-            #cv2.putText(annotated_frame, f'{hand[0].category_name}:{gesture[0].category_name}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            #gesture_list.append((hand[0].category_name, gesture[0].category_name))
+            #print(gesture_list)ges
+            hand = hand[0].category_name
+            gesture = gesture[0].category_name
+            if gesture != 'None':
+                if hand == 'Left':
+                    l_gesture_dict[timestamp] = gesture
+                else:
+                    r_gesture_dict[timestamp] = gesture
+           
+                cv2.putText(annotated_frame, f'{hand}:{gesture}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
             
-'''
-    for hand_landmarks in multi_hand_landmarks_list:
-        # print(hand_landmarks)
-        hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-        hand_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks])
 
-        solutions.drawing_utils.draw_landmarks(annotated_frame_list[timestamp],
-                                  hand_landmarks_proto,
-                                  solutions.hands.HAND_CONNECTIONS,
-                                  solutions.drawing_styles.get_default_hand_landmarks_style(),
-                                  solutions.drawing_styles.get_default_hand_connections_style())
+    # for hand_landmarks in multi_hand_landmarks_list:
+    #     # print(hand_landmarks)q
+    #     hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+    #     hand_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks])
+
+    #     solutions.drawing_utils.draw_landmarks(annotated_frame_list[timestamp],
+    #                               hand_landmarks_proto,
+    #                               solutions.hands.HAND_CONNECTIONS,
+    #                               solutions.drawing_styles.get_default_hand_landmarks_style(),
+    #                               solutions.drawing_styles.get_default_hand_connections_style())
         
-        # cv2.imshow('video', annotated_frame)
-        # cv2.waitKey(1)
-    print('gesture', timestamp, time.time()-t)
-    # annotated_frame = np.copy(cv2.cvtColor(output_image.numpy_view(), cv2.COLOR_RGB2BGR))
-'''
-    
+    #     # cv2.imshow('video', annotated_frame)
+    #     # cv2.waitKey(1)
+    # print('gesture', timestamp, time.time()-t)
+    # # annotated_frame = np.copy(cv2.cvtColor(output_image.numpy_view(), cv2.COLOR_RGB2BGR))
 
+    
+l_gesture_dict = dict()
+r_gesture_dict = dict()
         
 def pose_detector_callback(result, output_frame, timestamp):
     global annotated_frame
-    #pose_timestamp = timestamp
     #t = time.time()
     annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
     height, width = annotated_frame.shape[:2]
+    landmark_names = ('l_shoulder', 'r_shoulder', 'l_elbow', 'r_elbow', 'l_wrist', 'r_wrist')
+ 
+    
+    landmark_dict = dict()
     pose_landmarks_list = result.pose_landmarks
     for idx in range(len(pose_landmarks_list)):
         pose_landmarks = pose_landmarks_list[idx]
-        for i in range(len(pose_landmarks)):
-            lm_pos = np.array([int(pose_landmarks[i].x * width), int(pose_landmarks[i].y * height)])
-            # print(i, lm_pos)
+        for i , landmark_name in enumerate(landmark_names, 11):
+            landmark_cordinate = np.array([int(pose_landmarks[i].x * width), int(pose_landmarks[i].y * height)])
+            #print(pose_landmarks)
+            landmark_dict[landmark_name] = landmark_cordinate
+           
+            landmark_dict['l_visibility'] = pose_landmarks[15].visibility
+            landmark_dict['r_visibility'] = pose_landmarks[16].visibility
+        
+        # print(landmark_dict)
+        print('l',timestamp,l_gesture_dict)
+        print('r',timestamp,r_gesture_dict)
+        utils.arm_operation(landmark_dict, annotated_frame, obj_dict, l_gesture_dict, r_gesture_dict, timestamp)
+            
+       
+            
         pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
         pose_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x,y=landmark.y, z=landmark.z) for landmark in pose_landmarks])
         solutions.drawing_utils.draw_landmarks(annotated_frame,
-                                               pose_landmarks_proto,
-                                               solutions.pose.POSE_CONNECTIONS,
-                                               solutions.drawing_styles.get_default_pose_landmarks_style())
+                                            pose_landmarks_proto,
+                                            solutions.pose.POSE_CONNECTIONS,
+                                            solutions.drawing_styles.get_default_pose_landmarks_style())
+  
    
-    #print('pose', timestamp,time.time()-t)
-#     cv2.imshow('frame', annotated_frame)
-#     cv2.waitKey(1)
-#annotated_frame = None
-#gesture_timestamp = 0
-#pose_timestamp=0
+  
 def main():
-    global annotated_frame
-    WIDTH = 640
-    HEIGHT = 360
-    scale = 1
+    global annotated_frame, gesture_dict
+    scale = 2
+    WIDTH = 640*scale
+    HEIGHT = 360*scale
+    
     
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FPS, 30)
-
-    if not (cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH) and cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)):
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        scale = 2
-   
     
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
         
     if not cap.isOpened():
         print("Cannot open a video capture.")
@@ -100,8 +117,12 @@ def main():
     print(f'resolution:{width}x{height}')
     print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
     
+    # POSE_DETECTOR_MODEL = 'pose_landmarker_lite.task'
+    POSE_DETECTOR_MODEL = 'pose_landmarker_full.task'
+    # POSE_DETECTOR_MODEL = 'pose_landmarker_heavy.task'
     
-    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path='pose_landmarker_lite.task'),
+    
+    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path=POSE_DETECTOR_MODEL),
                                                          running_mode=vision.RunningMode.LIVE_STREAM,
                                                          result_callback=pose_detector_callback)
     gesture_recognizer_options = vision.GestureRecognizerOptions(num_hands=2,
@@ -111,10 +132,10 @@ def main():
 
     pose_detector =  vision.PoseLandmarker.create_from_options(pose_detector_options)
     gesture_recognizer = vision.GestureRecognizer.create_from_options(gesture_recognizer_options)
-    
+    global obj_dict
+    obj_dict = {'tv':(0, 200*scale, 100*scale, 160*scale), 'fan':(550*scale, 260*scale, 90*scale, 100*scale)}
     # ret, annotated_frame_list[0] = cap.read()
     timestamp = 0
-    roi_dict = {'tv':(0, 200*scale, 100*scale, 160*scale), 'fan':(550*scale, 260*scale, 90*scale, 100*scale)}
     pre_t = time.time()
     #annotated_frame_list = list()
     ret, frame = cap.read()
@@ -142,20 +163,18 @@ def main():
         
         pose_detector.detect_async(mp_frame, timestamp)
         
-        #gesture_recognizer.recognize_async(mp_frame, timestamp)
+        gesture_recognizer.recognize_async(mp_frame, timestamp)
         
         #print('timestamp',timestamp)
         
         #print('FPS', fps)
-        #cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-        # for name, (x,y,w,h) in roi_dict.items():
-        #     cv2.putText(frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
-        #     cv2.rectangle(frame, (x,y),(x+w, y+h), (0,0,255), 2)
+        cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        for name, (x, y, w, h) in obj_dict.items():
+            #print(x,y,w,h)
+            cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+            cv2.rectangle(annotated_frame, (x,y),(x+w, y+h), (0,0,255), 2)
 
        
-            
-        
-        
         cv2.imshow('frame', annotated_frame)
         key = cv2.waitKey(1)
         if key == ord('q'):
