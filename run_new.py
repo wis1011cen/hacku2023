@@ -11,7 +11,7 @@ from src2 import utils
 
 
 def gesture_recognizer_callback(result, output_frame, timestamp):
-    global l_gesture_dict, r_gesture_dict
+    global l_gesture_dict, r_gesture_dict, l_pre_gesture, r_pre_gesture, pre_gesture_dict
     #gesture_timestamp = timestamp
     #t = time.time()
     #annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
@@ -27,13 +27,17 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
             #print(gesture_list)ges
             hand = hand[0].category_name
             gesture = gesture[0].category_name
-            if gesture != 'None':
-                if hand == 'Left':
-                    l_gesture_dict[timestamp] = gesture
-                else:
-                    r_gesture_dict[timestamp] = gesture
+            #if gesture != 'None':
+                # Gesture Recognizerの左右の手の出力が逆
+            if hand == 'Left':
+                #r_gesture_dict[timestamp] = gesture
+                pre_gesture_dict['Right'] = gesture
+            else:
+                #l_gesture_dict[timestamp] = gesture
+                #l_pre_gesture = gesture
+                pre_gesture_dict['Left'] = gesture
            
-                cv2.putText(annotated_frame, f'{hand}:{gesture}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(annotated_frame, f'{gesture}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
             
 
@@ -56,6 +60,11 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
     
 l_gesture_dict = dict()
 r_gesture_dict = dict()
+
+r_pre_gesture = None
+l_pre_gesture = None
+
+pre_gesture_dict = {'Left': 'None', 'Right': 'None'}
         
 def pose_detector_callback(result, output_frame, timestamp):
     global annotated_frame
@@ -78,9 +87,10 @@ def pose_detector_callback(result, output_frame, timestamp):
             landmark_dict['r_visibility'] = pose_landmarks[16].visibility
         
         # print(landmark_dict)
-        print('l',timestamp,l_gesture_dict)
-        print('r',timestamp,r_gesture_dict)
-        utils.arm_operation(landmark_dict, annotated_frame, obj_dict, l_gesture_dict, r_gesture_dict, timestamp)
+        #print('l',timestamp,l_gesture_dict)
+        #print('r',timestamp,r_gesture_dict)
+        #utils.arm_operation(landmark_dict, annotated_frame, obj_dict, l_gesture_dict, r_gesture_dict, timestamp)
+        utils.arm_operation(landmark_dict, annotated_frame, obj_dict, pre_gesture_dict)
             
        
             
@@ -125,9 +135,19 @@ def main():
     pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path=POSE_DETECTOR_MODEL),
                                                          running_mode=vision.RunningMode.LIVE_STREAM,
                                                          result_callback=pose_detector_callback)
-    gesture_recognizer_options = vision.GestureRecognizerOptions(num_hands=2,
-                                                                 base_options=python.BaseOptions(model_asset_path='gesture_recognizer.task'),
+    CATEGORY_ALLOWLIST = ['None','Thumb_Up', 'Thumb_Down']
+    #CATEGORY_ALLOWLIST = ["None"、"Closed_Fist"、"Open_Palm"、"Pointing_Up"、"Thumb_Down"、"Thumb_Up"、"Victory"、"ILoveYou"]
+    
+                                            
+                                                    
+    gesture_recognizer_options = vision.GestureRecognizerOptions(base_options=python.BaseOptions(model_asset_path='gesture_recognizer.task'),
                                                                  running_mode=vision.RunningMode.LIVE_STREAM,
+                                                                 num_hands=2,
+                                                                 min_hand_detection_confidence = 0.5,
+                                                                 min_hand_presence_confidence = 0.5,
+                                                                 min_tracking_confidence= 0.5,
+                                                                 canned_gesture_classifier_options=mp.tasks.components.processors.ClassifierOptions(category_allowlist = CATEGORY_ALLOWLIST),
+                                                                 #custom_gesture_classifier_options: mp.tasks.components.processors.ClassifierOptions = dataclasses.field(default_factory=_ClassifierOptions),
                                                                  result_callback=gesture_recognizer_callback)
 
     pose_detector =  vision.PoseLandmarker.create_from_options(pose_detector_options)
