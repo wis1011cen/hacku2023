@@ -14,7 +14,6 @@ OPERATION_DISPLAY_TIME = 0.7
 operation_time = 0
 pre_wrist_pos = np.zeros(2)
 pre_appliance_name = None
-pre_appliance_name = None
 operation_name = None
 
 def load_start_time_dict(input_start_time_dict):
