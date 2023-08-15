@@ -1,6 +1,6 @@
 # branchの構成
 - __main__:          Pose landmark detectionだけ. 安定
-- __with_gesture__:  Gesture recognitionも行う. 改良の必要あり．
+- __with_gesture__:  Gesture recognitionも行う. 改良が必要．
 - __legacy__:        従来の方法で動作が遅い．
 
 # mediapipeをインストール
