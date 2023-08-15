@@ -26,29 +26,30 @@ def pose_detector_callback(result, output_frame, timestamp):
     landmark_dict = dict()
     pose_landmarks_list = result.pose_landmarks
     
-    if pose_landmarks_list:
-        for idx in range(len(pose_landmarks_list)):
-            pose_landmarks = pose_landmarks_list[idx]
-            for i , landmark_name in enumerate(landmark_names, 11):
-                landmark_cordinate = np.array([int(pose_landmarks[i].x * width), int(pose_landmarks[i].y * height)])
-                landmark_dict[landmark_name] = landmark_cordinate
-                
-                # 11:
-                landmark_dict['l_visibility'] = pose_landmarks[11].visibility
-                landmark_dict['r_visibility'] = pose_landmarks[12].visibility
+    for appliance_name, (x, y, w, h) in appliance_dict.items():
+        cv2.putText(annotated_frame, appliance_name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
+    
+   # if pose_landmarks_list:
+    for idx in range(len(pose_landmarks_list)):
+        pose_landmarks = pose_landmarks_list[idx]
+        for i , landmark_name in enumerate(landmark_names, 11):
+            landmark_cordinate = np.array([int(pose_landmarks[i].x * width), int(pose_landmarks[i].y * height)])
+            landmark_dict[landmark_name] = landmark_cordinate
             
-            utils.arm_operation(landmark_dict, annotated_frame, appliance_dict)
-                
-            pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-            pose_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x,y=landmark.y, z=landmark.z) for landmark in pose_landmarks])
-            solutions.drawing_utils.draw_landmarks(annotated_frame,
-                                                pose_landmarks_proto,
-                                                solutions.pose.POSE_CONNECTIONS,
-                                                solutions.drawing_styles.get_default_pose_landmarks_style())
-    else:
-        for name, (x, y, w, h) in appliance_dict.items():
-            cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
+            # 11:
+            landmark_dict['l_visibility'] = pose_landmarks[11].visibility
+            landmark_dict['r_visibility'] = pose_landmarks[12].visibility
+        
+        utils.arm_operation(landmark_dict, annotated_frame, appliance_dict)
+            
+        pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        pose_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x,y=landmark.y, z=landmark.z) for landmark in pose_landmarks])
+        solutions.drawing_utils.draw_landmarks(annotated_frame,
+                                            pose_landmarks_proto,
+                                            solutions.pose.POSE_CONNECTIONS,
+                                            solutions.drawing_styles.get_default_pose_landmarks_style())
+        
             
 def main():
     global annotated_frame, appliance_dict, start_time_dict
@@ -79,11 +80,7 @@ def main():
     print(f'resolution:{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}x{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}')
     print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
     
-    POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_lite.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_full.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_heavy.task'
-    
-    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path=POSE_DETECTOR_MODEL),
+    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path='models/pose_landmarker_lite.task'),
                                                          running_mode=vision.RunningMode.LIVE_STREAM,
                                                          result_callback=pose_detector_callback)
 

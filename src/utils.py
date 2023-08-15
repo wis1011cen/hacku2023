@@ -24,22 +24,12 @@ def load_start_time_dict(input_start_time_dict):
  
 def arm_operation(landmark_dict, annotated_frame, appliance_dict):
     global start_time_dict
-    
-        #cv2.putText(annotated_frame, f'{degree:.0f}', (0, 0), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
-    for appliance_name, (x, y, w, h) in appliance_dict.items():
-        cv2.putText(annotated_frame, appliance_name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-        cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
         
     if operation_name is not None and (time.time() - operation_time) < OPERATION_DISPLAY_TIME:
-        #cv2.putText(annotated_frame, operation_name, (0, 30), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
         x, y, w, h = appliance_dict[operation_name.split('-')[0]]
         cv2.putText(annotated_frame, operation_name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
         cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 0, 255), 2)
-    else:
-        for appliance_name, (x, y, w, h) in appliance_dict.items():
-            cv2.putText(annotated_frame, appliance_name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
-    
+        
     if landmark_dict['l_visibility'] > VISIBILITY_THRESHOLD:
         degree = calculate_degree(landmark_dict['l_shoulder'], landmark_dict['l_elbow'], landmark_dict['l_wrist'])
         if degree > DEGREE_THRESHOLD:
