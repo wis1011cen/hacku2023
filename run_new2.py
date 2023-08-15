@@ -18,7 +18,7 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
     
     if gestures:
         for i, (hand, gesture) in enumerate(zip(handedness, gestures)):
-            #gesture_list.append((hand[0].category_name, gesture[0].category_name))
+            #gesture_list.append((hand[0].category_name, gesture[0].category_name))q
             hand = hand[0].category_name
             gesture = gesture[0].category_name
             if gesture != 'None':
