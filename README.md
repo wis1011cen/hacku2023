@@ -5,6 +5,7 @@
 
 # mediapipeをインストール
 https://developers.google.com/mediapipe/solutions/vision/pose_landmarker/python#live-stream
+
 `pip install mediapipe==0.10.3`
 
 #### インストールに失敗する場合：
