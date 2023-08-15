@@ -4,6 +4,7 @@
 - __legacy__:        従来の方法で動作が遅い．
 
 # mediapipeをインストール
+非同期でフレームの処理を行うことで，高FPSを実現できるように改良．
 https://developers.google.com/mediapipe/solutions/vision/pose_landmarker/python#live-stream
 
 `pip install mediapipe==0.10.3`
