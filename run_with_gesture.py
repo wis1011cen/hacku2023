@@ -6,7 +6,8 @@ from mediapipe.framework.formats import landmark_pb2
 import cv2
 import time
 import numpy as np
-from src2 import utils
+import src.utils as utils
+
 CATEGORY_ALLOWLIST = ['None', 'Thumb_Up', 'Thumb_Down']
 
 def gesture_recognizer_callback(result, output_frame, timestamp):
@@ -23,19 +24,17 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
             gesture = gesture[0].category_name
             if gesture != 'None':
                 if hand == 'Left':
-                    hand == 'Right'
+                    hand = 'Right'
             #     #r_gesture_dict[timestamp] = gesture
                     pre_gesture_dict['Right'] = gesture
                 else:
-                    hand == 'Left'
-            #     #l_gesture_dict[timestamp] = gesture
-            #     #l_pre_gesture = gesture
+                    hand = 'Left'
                     pre_gesture_dict['Left'] = gesture
                 print(timestamp, hand, gesture)
             #cv2.putText(annotated_frame, f'{gesture}', (0, 60+30*i), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
             
-
+"""
     for hand_landmarks in multi_hand_landmarks_list:
         hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
         hand_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks])
@@ -45,7 +44,7 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
                                   solutions.hands.HAND_CONNECTIONS,
                                   solutions.drawing_styles.get_default_hand_landmarks_style(),
                                   solutions.drawing_styles.get_default_hand_connections_style())
-        
+ """       
     #     # cv2.imshow('video', annotated_frame)
     #     # cv2.waitKey(1)
     # print('gesture', timestamp, time.time()-t)
@@ -110,7 +109,7 @@ def pose_detector_callback(result, output_frame, timestamp):
   
 def main():
     global annotated_frame, gesture_dict
-    scale = 2
+    scale = 1
     WIDTH = 640*scale
     HEIGHT = 360*scale
     
@@ -132,9 +131,9 @@ def main():
     print(f'resolution:{width}x{height}')
     print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
     
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_lite.task'
-    POSE_DETECTOR_MODEL = 'pose_landmarker_full.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_heavy.task'
+    POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_lite.task'
+    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_full.task'
+    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_heavy.task'
     
     
     pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path=POSE_DETECTOR_MODEL),
@@ -180,7 +179,7 @@ def main():
         #print('timestamp',timestamp)
         
         #print('FPS', fps)
-        cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        #cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
         for name, (x, y, w, h) in obj_dict.items():
             #print(x,y,w,h)
             cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)

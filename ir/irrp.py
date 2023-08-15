@@ -33,7 +33,7 @@ VERBOSE = False
 TOLERANCE = 15
 TOLER_MIN =  (100 - TOLERANCE) / 100.0
 TOLER_MAX =  (100 + TOLERANCE) / 100.0
-FILE = 'codes'
+FILE = 'codes1'
 POST_US = 130 * 1000
 GAP_S = 0.1
 FREQ = 38.0
@@ -331,7 +331,7 @@ def ir_recording(id):
 def ir_lightning(id):
     print('lightning')
 
-    filename = 'ir/codes'
+    filename = 'ir/codes1'
     gpio = 17
     
     pi = pigpio.pi()
@@ -403,5 +403,5 @@ def ir_lightning(id):
     
     
 if __name__ == '__main__':
-    ir_recording('tv-down')
+    ir_recording('fan-down')
     #ir_lightning('tv-on')
