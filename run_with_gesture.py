@@ -8,8 +8,6 @@ import time
 import numpy as np
 import src.utils as utils
 
-CATEGORY_ALLOWLIST = ['None', 'Thumb_Up', 'Thumb_Down']
-
 def gesture_recognizer_callback(result, output_frame, timestamp):
     global pre_gesture_dict, annotated_frame
     #annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
@@ -91,6 +89,7 @@ def pose_detector_callback(result, output_frame, timestamp):
 def main():
     global annotated_frame, gesture_recognizer, pre_gesture_dict, appliance_dict
     SCALE = 2
+    
     WIDTH = 640*SCALE
     HEIGHT = 360*SCALE
     
@@ -103,24 +102,17 @@ def main():
     if not cap.isOpened():
         print("Cannot open a video capture.")
         exit(-1)
-        
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
-
-    print(f'resolution:{width}x{height}')
+    print(f'resolution:{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}x{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}')
     print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
-    
-    POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_lite.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_full.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_heavy.task'
-    
-    
-    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path=POSE_DETECTOR_MODEL),
+   
+    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path='models/pose_landmarker_lite.task'),
                                                          running_mode=vision.RunningMode.LIVE_STREAM,
                                                          result_callback=pose_detector_callback)
     
-    gesture_recognizer_options = vision.GestureRecognizerOptions(base_options=python.BaseOptions(model_asset_path='gesture_recognizer.task'),
+    CATEGORY_ALLOWLIST = ['None', 'Thumb_Up', 'Thumb_Down']
+    
+    gesture_recognizer_options = vision.GestureRecognizerOptions(base_options=python.BaseOptions(model_asset_path='models/gesture_recognizer.task'),
                                                                 running_mode=vision.RunningMode.LIVE_STREAM,
                                                                 num_hands=2,
                                                                 min_hand_detection_confidence = 0.5,
