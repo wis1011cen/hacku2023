@@ -1,6 +1,7 @@
 # branchの構成
-- main: poseだけ
-- legacy: ssh接続を行う
+- main: poseだけ. 安定
+- with_gesture: Gesture recognitionも行う. 改良の必要あり．
+- legacy: 従来の方法で動作が遅い．
 
 # mediapipeをインストール
 https://developers.google.com/mediapipe/solutions/vision/pose_landmarker/python#live-stream
