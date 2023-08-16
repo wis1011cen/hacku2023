@@ -11,6 +11,13 @@ import src.utils as utils
 import src.roi as roi
 import csv
 
+# 11 - left shoulder
+# 12 - right shoulder
+# 13 - left elbow
+# 14 - right elbow
+# 15 - left wrist
+# 16 - right wrist
+
 def pose_detector_callback(result, output_frame, timestamp):
     global annotated_frame
     annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
@@ -19,14 +26,20 @@ def pose_detector_callback(result, output_frame, timestamp):
     landmark_dict = dict()
     pose_landmarks_list = result.pose_landmarks
     
+    for appliance_name, (x, y, w, h) in appliance_dict.items():
+        cv2.putText(annotated_frame, appliance_name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+        cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
+    
+   # if pose_landmarks_list:
     for idx in range(len(pose_landmarks_list)):
         pose_landmarks = pose_landmarks_list[idx]
         for i , landmark_name in enumerate(landmark_names, 11):
             landmark_cordinate = np.array([int(pose_landmarks[i].x * width), int(pose_landmarks[i].y * height)])
             landmark_dict[landmark_name] = landmark_cordinate
-           
-            landmark_dict['l_visibility'] = pose_landmarks[15].visibility
-            landmark_dict['r_visibility'] = pose_landmarks[16].visibility
+            
+            # 11:
+            landmark_dict['l_visibility'] = pose_landmarks[11].visibility
+            landmark_dict['r_visibility'] = pose_landmarks[12].visibility
         
         utils.arm_operation(landmark_dict, annotated_frame, appliance_dict)
             
@@ -36,9 +49,10 @@ def pose_detector_callback(result, output_frame, timestamp):
                                             pose_landmarks_proto,
                                             solutions.pose.POSE_CONNECTIONS,
                                             solutions.drawing_styles.get_default_pose_landmarks_style())
-  
+        
+            
 def main():
-    global annotated_frame, appliance_dict
+    global annotated_frame, appliance_dict, start_time_dict
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--set', action='store_true')
@@ -66,11 +80,7 @@ def main():
     print(f'resolution:{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}x{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}')
     print('FPS:' ,cap.get(cv2.CAP_PROP_FPS))
     
-    POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_lite.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_full.task'
-    # POSE_DETECTOR_MODEL = 'pose_landmarker_models/pose_landmarker_heavy.task'
-    
-    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path=POSE_DETECTOR_MODEL),
+    pose_detector_options = vision.PoseLandmarkerOptions(base_options=python.BaseOptions(model_asset_path='models/pose_landmarker_lite.task'),
                                                          running_mode=vision.RunningMode.LIVE_STREAM,
                                                          result_callback=pose_detector_callback)
 
@@ -98,6 +108,16 @@ def main():
                 
     else:
         appliance_dict = {'tv':(0, 200*SCALE, 100*SCALE, 160*SCALE), 'fan':(550*SCALE, 260*SCALE, 90*SCALE, 100*SCALE)}
+    
+    l_start_time_dict = dict()
+    r_start_time_dict = dict()
+    for name in appliance_dict.keys():
+        l_start_time_dict[name] = 0
+        r_start_time_dict[name] = 0
+    start_time_dict = {'Left': l_start_time_dict, 'Right': r_start_time_dict}
+    #print(start_time_dict)
+    
+    utils.load_start_time_dict(start_time_dict)
     
     timestamp = 0
     # pre_t = time.time()
@@ -129,9 +149,9 @@ def main():
         
         #print('FPS', fps)
         #cv2.putText(annotated_frame, f'FPS:{fps:.1f}', (0, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-        for name, (x, y, w, h) in appliance_dict.items():
-            cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
-            cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0,0,255), 2)
+        # for name, (x, y, w, h) in appliance_dict.items():
+        #     cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+        #     cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
 
         cv2.imshow('Video', annotated_frame)
         
