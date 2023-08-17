@@ -94,7 +94,7 @@ def gesture_recognizer_callback(result, output_frame, timestamp):
                     # hand = 'Left'
                     gesture_dict['Left'] = gesture
         
-    print(timestamp, gesture_dict)
+    # print(timestamp, gesture_dict)
                 
 
    
@@ -143,14 +143,14 @@ def main():
     pose_detector =  vision.PoseLandmarker.create_from_options(pose_detector_options)
     
     appliance_dict = {'tv':(0, 200*SCALE, 100*SCALE, 160*SCALE), 'fan':(550*SCALE, 260*SCALE, 90*SCALE, 100*SCALE)}
-    l_start_time_dict = dict()
-    r_start_time_dict = dict()
+    # l_start_time_dict = dict()
+    # r_start_time_dict = dict()
     
-    for name in appliance_dict.keys():
-        l_start_time_dict[name] = 0
-        r_start_time_dict[name] = 0
-    start_time_dict = {'Left': l_start_time_dict, 'Right': r_start_time_dict}
-    utils.load_start_time_dict(start_time_dict)
+    # for name in appliance_dict.keys():
+    #     l_start_time_dict[name] = 0
+    #     r_start_time_dict[name] = 0
+    # start_time_dict = {'Left': l_start_time_dict, 'Right': r_start_time_dict}
+    # utils.load_start_time_dict(start_time_dict)
     
     timestamp = 0
     pre_t = time.time()

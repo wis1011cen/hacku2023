@@ -7,9 +7,9 @@ import ir.irrp as irrp
 SCALE = 2
 RATIO = 0.5
 
-L_DURATION = 0.5
+# L_DURATION = 0.5
 L_COOL_TIME = 1
-R_DURATION = 0.5
+# R_DURATION = 0.5
 R_COOL_TIME = 1
 DEGREE_THRESHOLD = 120
 VISIBILITY_THRESHOLD = 0.7
@@ -18,18 +18,17 @@ OPERATION_DISPLAY_TIME = 0.7
 
 
 operation_time = 0
-pre_wrist_pos = np.zeros(2)
+# pre_wrist_pos = np.zeros(2)
 operation_name = None
-pre_name = None
+# pre_name = None
 
-def load_start_time_dict(input_start_time_dict):
-    global start_time_dict
-    start_time_dict = input_start_time_dict
+# def load_start_time_dict(input_start_time_dict):
+#     global start_time_dict
+#     start_time_dict = input_start_time_dict
  
 
 def arm_operation(landmark_dict, annotated_frame, appliance_dict, gesture_dict):
-    global start_time_dict
-    
+   
     cv2.putText(annotated_frame, f"Left: {gesture_dict['Left']}", (0, 100), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
     cv2.putText(annotated_frame, f"Right: {gesture_dict['Right']}", (0, 150), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
         
@@ -43,15 +42,11 @@ def arm_operation(landmark_dict, annotated_frame, appliance_dict, gesture_dict):
         degree = calculate_degree(landmark_dict['l_shoulder'], landmark_dict['l_elbow'], landmark_dict['l_wrist'])
         if degree > DEGREE_THRESHOLD:
             l_ir_operation(annotated_frame, landmark_dict['l_wrist'], appliance_dict, landmark_dict['l_elbow'], gesture_dict['Left'])
-        else:
-            start_time_dict['Left'] = {name : 0 for name in start_time_dict['Left'].keys()}
    
     if landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
         degree = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
         if degree > DEGREE_THRESHOLD:
             r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'], gesture_dict['Right'])
-        else:
-            start_time_dict['Left'] = {name : 0 for name in start_time_dict['Left'].keys()}
         
         
 # 3点のなす角度を求める
@@ -69,7 +64,6 @@ def calculate_degree(pos1, pos2, pos3):
     
 # 左腕で電源ON
 def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, l_gesture):
-    global operation_time, start_time_dict, pre_wrist_pos, pre_name
     extended_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
     color = (255, 0, 0)
     
@@ -80,14 +74,11 @@ def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, l_gest
             #線分が交わるか判定
             if hit_detection(wrist_pos, extended_pos, appliance_pos):
                 if l_gesture == 'Thumb_Up':
-                    end = 'up' 
-                    ir_operation(appliance_name, end, 'Left')
+                    ir_operation(f'{appliance_name}-up')
                 elif l_gesture == 'Thumb_Down':
-                    end = 'down'
-                    ir_operation(appliance_name, end, 'Left')
+                    ir_operation(f'{appliance_name}-down')
                 elif l_gesture == 'Pointing_Up':
-                    end = 'on'
-                    ir_operation(appliance_name, end, 'Left')
+                    ir_operation(f'{appliance_name}-on')
                             
                 color = (0, 0, 255)
                 break
@@ -97,7 +88,6 @@ def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, l_gest
     
 # 右腕:チャンネル変更 
 def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, r_pre_gesture):
-    global start_time_dict, operation_time, pre_wrist_pos, pre_name
     ex_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
     color = (255, 0, 0)
     if (time.time() - operation_time) > R_COOL_TIME or operation_time == 0:
@@ -106,22 +96,20 @@ def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, r_pre_
             # 線分が交わるか判定
             if hit_detection(wrist_pos, ex_pos, appliance_pos):
                 if r_pre_gesture == 'Thumb_Up':
-                    end = 'up' 
-                    ir_operation(appliance_name, end, 'Right')
+                    ir_operation(f'{appliance_name}-up')
                 elif r_pre_gesture == 'Thumb_Down':
-                    end = 'down'
-                    ir_operation(appliance_name, end, 'Right') 
+                    ir_operation(f'{appliance_name}-down') 
+                    
                 color = (0, 0, 255)
                 break   
     
-            
     cv2.line(annotated_frame, wrist_pos, ex_pos, color, 2)
   
 
 
-def ir_operation(name, end, hand):
+def ir_operation(name):
     global operation_time, operation_name
-    operation_name = f'{name}-{end}'
+    operation_name = name
     print(operation_name)
     #irrp.ir_lightning(operation_name)
 
