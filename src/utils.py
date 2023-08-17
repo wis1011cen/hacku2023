@@ -68,11 +68,10 @@ def calculate_degree(pos1, pos2, pos3):
 
     
 # 左腕で電源ON
-def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, l_pre_gesture):
+def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, l_gesture):
     global operation_time, start_time_dict, pre_wrist_pos, pre_name
     extended_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
     color = (255, 0, 0)
-    
     
     if (time.time() - operation_time) > L_COOL_TIME or operation_time == 0:
         for appliance_name, appliance_pos in appliance_dict.items():
@@ -80,45 +79,18 @@ def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, l_pre_
             
             #線分が交わるか判定
             if hit_detection(wrist_pos, extended_pos, appliance_pos):
-                # if start_time_dict['Left'][appliance_name] == 0:
-                #     start_time_dict['Left'][appliance_name] = time.time()
-                # else:
-                #     duration_time = time.time() - start_time_dict['Left'][appliance_name] 
-                
-                #     # 一定時間以上交わったとき
-                #     if duration_time > L_DURATION: 
-                #         end = 'on'
-                #         duration_time = 0
-                if l_pre_gesture == 'Open_Palm':
-                    end = 'on' 
-                    ir_operation(appliance_name, end, 'Right')
-                elif l_pre_gesture == 'Pointing_Up':
-                    pre_wrist_pos = wrist_pos
-                    pre_name = appliance_name
-                    #end = ''
-                    # ir_operation(appliance_name, end, 'Right') 
-                color = (0, 0, 255)
-                        # ir_operation(appliance_name, end, 'Left')
-                    # else:
-                        # cv2.putText(annotated_frame, f'L:{duration_time:.1f}', (0, 30), cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2) 
+                if l_gesture == 'Thumb_Up':
+                    end = 'up' 
+                    ir_operation(appliance_name, end, 'Left')
+                elif l_gesture == 'Thumb_Down':
+                    end = 'down'
+                    ir_operation(appliance_name, end, 'Left')
+                elif l_gesture == 'Pointing_Up':
+                    end = 'on'
+                    ir_operation(appliance_name, end, 'Left')
                             
                 color = (0, 0, 255)
                 break
-            # else:
-    if pre_name is not None:
-        appliance_pos = appliance_dict[pre_name]
-        
-        if not hit_detection(wrist_pos, extended_pos, appliance_pos):
-            if wrist_pos[1] < pre_wrist_pos[1]:
-                end = 'up'
-            else:
-                end = 'down'
-            # end = 'up' if wrist_pos[1] < pre_wrist_pos[1] else 'down'
-            
-            ir_operation(pre_name, end, 1)
-            
-            pre_name = None
-                
 
             
     cv2.line(annotated_frame, wrist_pos, extended_pos, color, 2)
@@ -128,27 +100,11 @@ def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, r_pre_
     global start_time_dict, operation_time, pre_wrist_pos, pre_name
     ex_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
     color = (255, 0, 0)
-    #print(r_pre_gesture)
     if (time.time() - operation_time) > R_COOL_TIME or operation_time == 0:
         for appliance_name, appliance_pos in appliance_dict.items():
             color = (255, 0, 0)
             # 線分が交わるか判定
             if hit_detection(wrist_pos, ex_pos, appliance_pos):
-                # if start_time_dict['Right'][appliance_name] == 0:
-                #     start_time_dict['Right'][appliance_name] = time.time()
-                # else:
-                #     duration_time = time.time() - start_time_dict['Right'][appliance_name]
-                #     cv2.putText(annotated_frame, f'R:{duration_time:.1f}', (0, 30), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
-                    
-                #     if duration_time > R_DURATION:
-                #         if r_pre_gesture == 'Thumb_Up':
-                #             end = 'up' 
-                #             ir_operation(appliance_name, end, 'Right')
-                #         elif r_pre_gesture == 'Thumb_Down':
-                #             end = 'down'
-                #             ir_operation(appliance_name, end, 'Right') 
-                #         duration_time = 0 
-                
                 if r_pre_gesture == 'Thumb_Up':
                     end = 'up' 
                     ir_operation(appliance_name, end, 'Right')
@@ -156,25 +112,8 @@ def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, r_pre_
                     end = 'down'
                     ir_operation(appliance_name, end, 'Right') 
                 color = (0, 0, 255)
-                break
-                    
-            else:
-                start_time_dict['Right'][appliance_name] = 0
-                
-    # # 線分が交わった状態から離れた場合
-    # if isinstance(pre_name, str):
-    #     appliance_pos = appliance_dict[pre_name]
-        
-    #     if not hit_detection(wrist_pos, ex_pos, appliance_pos):
-    #         if wrist_pos[1] < pre_wrist_pos[1]:
-    #             end = 'up'
-    #         else:
-    #             end = 'down'
-    #         # end = 'up' if wrist_pos[1] < pre_wrist_pos[1] else 'down'
-            
-    #         ir_operation(pre_name, end, 1)
-            
-    #         pre_name = None
+                break   
+    
             
     cv2.line(annotated_frame, wrist_pos, ex_pos, color, 2)
   
@@ -184,10 +123,6 @@ def ir_operation(name, end, hand):
     global operation_time, operation_name
     operation_name = f'{name}-{end}'
     print(operation_name)
-
-    #cv2.putText(annotated_frame, operation_name, (0,150), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)  
-
-    
     #irrp.ir_lightning(operation_name)
 
     operation_time = time.time()
