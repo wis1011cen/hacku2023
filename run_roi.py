@@ -20,12 +20,88 @@ import src.utils as utils
 # 20 - right index
 # 21 - left thumb
 # 22 - right thumb
+# 23 - left hip
+# 24 - right hip
+
+def l_rotate_and_crop(landmark_dict, input_frame):
+    RATIO = 0.5
+    angle = utils.calculate_degree(landmark_dict['l_wrist'], landmark_dict['l_shoulder'], np.array((0, landmark_dict['l_shoulder'][1])))
+    y_wrist = landmark_dict['l_wrist'][1] 
+    y_elbow = landmark_dict['l_elbow'][1]
+
+    if angle < 90:
+        if y_wrist > y_elbow:
+            angle = - 90 - angle
+        else:
+            angle = angle - 90
+    else:
+        if y_wrist > y_elbow:
+            angle = 270 -angle  
+        else:
+            angle = angle -90
+
+    center = (int(landmark_dict['l_index'][0]), int(landmark_dict['l_index'][1]))
+    rotate_matrix = cv2.getRotationMatrix2D(center=center, angle=angle, scale=1)
+    l_rotated_frame = cv2.warpAffine(src=input_frame, M=rotate_matrix, dsize=(640*2,360*2))
+    
+    size = abs(landmark_dict['l_shoulder'][1] - landmark_dict['l_hip'][1])
+    
+    min_y = max(int(landmark_dict['l_index'][1] - RATIO*size) , 0)
+    min_x = max(int(landmark_dict['l_index'][0] - RATIO*size), 0)
+    max_y = int(landmark_dict['l_index'][1] + RATIO*size)
+    max_x = int(landmark_dict['l_index'][0] + RATIO*size)
+    
+    l_cropped_frame = l_rotated_frame[min_y : max_y, min_x : max_x]
+    cv2.rectangle(l_rotated_frame, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)
+    
+    if not(l_cropped_frame.shape[0] > 0 and l_cropped_frame.shape[1] > 0):
+        l_cropped_frame = None
+    
+    return l_rotated_frame, l_cropped_frame
+    
+
+
+def r_rotate_and_crop(landmark_dict, input_frame):
+    RATIO = 0.5
+    angle = utils.calculate_degree(landmark_dict['r_wrist'], landmark_dict['r_shoulder'], np.array((0, landmark_dict['r_shoulder'][1])))
+    y_wrist = landmark_dict['r_wrist'][1] 
+    y_elbow = landmark_dict['r_elbow'][1]
+
+    if angle < 90:
+        if y_wrist > y_elbow:
+            angle = -angle
+    else:
+        if y_wrist > y_elbow:
+            angle = 180 -angle  
+        else:
+            angle = angle -180
+
+    center = (int(landmark_dict['r_index'][0]), int(landmark_dict['r_index'][1]))
+    rotate_matrix = cv2.getRotationMatrix2D(center=center, angle=angle, scale=1)
+    r_rotated_frame = cv2.warpAffine(src=input_frame, M=rotate_matrix, dsize=(640*2,360*2))
+    
+    size = abs(landmark_dict['r_shoulder'][1] - landmark_dict['r_hip'][1])
+    
+    min_y = max(int(landmark_dict['r_index'][1] - RATIO*size) , 0)
+    min_x = max(int(landmark_dict['r_index'][0] - RATIO*size), 0)
+    max_y = int(landmark_dict['r_index'][1] + RATIO*size)
+    max_x = int(landmark_dict['r_index'][0] + RATIO*size)
+    
+    r_cropped_frame = r_rotated_frame[min_y : max_y, min_x : max_x]
+    cv2.rectangle(r_rotated_frame, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)
+    
+    if not(r_cropped_frame.shape[0] > 0 and r_cropped_frame.shape[1] > 0):
+        r_cropped_frame = None
+        
+
+    return r_rotated_frame, r_cropped_frame 
+
         
 def pose_detector_callback(result, output_frame, timestamp):
     global annotated_frame, rotated_frame, cropped_frame
 
     annotated_frame = np.copy(cv2.cvtColor(output_frame.numpy_view(), cv2.COLOR_RGB2BGR))
-    rotated_frame = np.copy(annotated_frame)
+    copy_frame = np.copy(annotated_frame)
     
     for name, (x, y, w, h) in appliance_dict.items():
         cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
@@ -33,7 +109,7 @@ def pose_detector_callback(result, output_frame, timestamp):
     
     height, width = annotated_frame.shape[:2]
     landmark_names = ('l_shoulder', 'r_shoulder', 'l_elbow', 'r_elbow', 'l_wrist', 'r_wrist',
-                      'l_pinky', 'r_pinky', 'l_index', 'r_index', 'l_thumb', 'r_thumb')
+                      'l_pinky', 'r_pinky', 'l_index', 'r_index', 'l_thumb', 'r_thumb', 'l_hip', 'r_hip')
     landmark_dict = dict()
     pose_landmarks_list = result.pose_landmarks
     
@@ -46,53 +122,47 @@ def pose_detector_callback(result, output_frame, timestamp):
         landmark_dict['l_visibility'] = pose_landmarks[11].visibility
         landmark_dict['r_visibility'] = pose_landmarks[12].visibility
         
-        landmark_dict['r_hip'] = np.array([int(pose_landmarks[24].x * width), int(pose_landmarks[24].y * height)])
-      
-        size = abs(landmark_dict['r_shoulder'][1] - landmark_dict['r_hip'][1])
-  
-        angle = utils.calculate_degree(landmark_dict['r_wrist'], landmark_dict['r_shoulder'], np.array((0, landmark_dict['r_shoulder'][1])))
-        
-        y_wrist = landmark_dict['r_wrist'][1] 
-        y_elbow = landmark_dict['r_elbow'][1]
-        
-        if angle < 90:
-            if y_wrist > y_elbow:
-                angle = -angle
-        else:
-            if y_wrist > y_elbow:
-                angle = 180 -angle  
+        global rotated_frame
+        l_rotated_frame, l_cropped_frame = l_rotate_and_crop(landmark_dict, copy_frame)
+        r_rotated_frame, r_cropped_frame= r_rotate_and_crop(landmark_dict, copy_frame)
+        rotated_frame = cv2.hconcat([r_rotated_frame, l_rotated_frame])
+        if l_cropped_frame is not None and r_cropped_frame is not None:
+            # print('L', l_cropped_frame.shape)
+            # print('R', r_cropped_frame.shape)
+    
+            diff = l_cropped_frame.shape[0] - r_cropped_frame.shape[0]
+            # print(diff)
+            if diff > 0:
+                l_padding = cv2.copyMakeBorder(l_cropped_frame, 0, 0, 0, 0, cv2.BORDER_CONSTANT, (0,0,0))
+                r_padding = cv2.copyMakeBorder(r_cropped_frame, 0, diff, 0, 0, cv2.BORDER_CONSTANT, (0,0,0))
             else:
-                angle = angle -180
-      
-     
-        center = ([int(pose_landmarks[20].x * width), int(pose_landmarks[20].y * height)])   
-        rotate_matrix = cv2.getRotationMatrix2D(center=center, angle=angle, scale=1)
-        rotated_frame = cv2.warpAffine(src=rotated_frame, M=rotate_matrix, dsize=(640*2,360*2))
+                diff = - diff
+                l_padding = cv2.copyMakeBorder(l_cropped_frame, 0, diff, 0, 0, cv2.BORDER_CONSTANT, (0,0,0))
+                r_padding = cv2.copyMakeBorder(r_cropped_frame, 0, 0, 0, 0, cv2.BORDER_CONSTANT, (0,0,0))
+            # print(l_padding.shape)
+            # print(r_padding.shape)
+            # l_resize = cv2.resize(l_cropped_frame, (l_cropped_frame.shape[1], h_min))
+            # r_resize = cv2.resize(r_cropped_frame, (r_cropped_frame.shape[1], h_min))
+            
+            cropped_frame = cv2.hconcat([r_padding, l_padding])
+       
+        elif l_cropped_frame is not None:
+            cropped_frame = r_cropped_frame
         
-        
-        depth = 0.5*abs(pose_landmarks[20].z)
-        #print(depth)
-        
-        min_y = max(int(landmark_dict['r_index'][1] - depth*size) , 0)
-        min_x = max(int(landmark_dict['r_index'][0] - depth*size), 0)
-        max_y = int(landmark_dict['r_index'][1] + depth*size)
-        max_x = int(landmark_dict['r_index'][0] + depth*size)
-     
-        cropped_frame = rotated_frame[min_y : max_y, min_x : max_x]
-        cv2.rectangle(rotated_frame, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)
-        
-        if cropped_frame.shape[0] > 0 and cropped_frame.shape[1] > 0:
-            mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
-            gesture_recognizer.recognize_async(mp_frame, timestamp)
+        elif r_cropped_frame is not None:
+            cropped_frame = l_cropped_frame
         else:
             cropped_frame = None
-        
-        
-        
-        
-        
+        if cropped_frame is not None:
+            mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2RGB))
+            gesture_recognizer.recognize_async(mp_frame, timestamp)
+
         utils.arm_operation(landmark_dict, annotated_frame, appliance_dict, pre_gesture_dict)
             
+           
+        
+           
+        # Pose Landmark の描画 
         pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
         pose_landmarks_proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=landmark.x,y=landmark.y, z=landmark.z) for landmark in pose_landmarks])
         solutions.drawing_utils.draw_landmarks(annotated_frame,
@@ -166,7 +236,7 @@ def main():
                                                          running_mode=vision.RunningMode.LIVE_STREAM,
                                                          result_callback=pose_detector_callback)
     
-    CATEGORY_ALLOWLIST = ['None', 'Thumb_Up', 'Thumb_Down']
+    CATEGORY_ALLOWLIST = ["None", "Closed_Fist", "Open_Palm", "Pointing_Up", "Thumb_Down", "Thumb_Up", "Victory", "ILoveYou"]
     
     gesture_recognizer_options = vision.GestureRecognizerOptions(base_options=python.BaseOptions(model_asset_path='models/gesture_recognizer.task'),
                                                                 running_mode=vision.RunningMode.LIVE_STREAM,
@@ -204,6 +274,7 @@ def main():
     rotated_frame = np.copy(frame)
     cropped_frame = None
    
+   
     while True:
         t = time.time() - pre_t
         pre_t = time.time()
@@ -233,12 +304,14 @@ def main():
         # for name, (x, y, w, h) in appliance_dict.items():
         #     cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
         #     cv2.rectangle(annotated_frame, (x,y),(x+w, y+h), (0,0,255), 2)
-
+        
+        cv2.imshow('main', annotated_frame)
+        # cv2.imshow('video', cv2.hconcat([annotated_frame, rotated_frame]))
+        # cv2.imshow('rotated', rotated_frame)
        
-        cv2.imshow('video', cv2.hconcat([annotated_frame, rotated_frame]))
-        #cv2.imshow('rotate', rotated_frame)
-        if cropped_frame is not None:
-            cv2.imshow('cropped', cropped_frame)
+        # if cropped_frame is not None:
+        #     cv2.imshow('cropped', cropped_frame)
+    
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
