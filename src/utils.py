@@ -3,6 +3,10 @@ import numpy as np
 import time
 import ir.irrp as irrp
 
+ 
+SCALE = 2
+RATIO = 0.5
+
 L_DURATION = 0.5
 L_COOL_TIME = 1
 R_DURATION = 0.5
@@ -10,6 +14,8 @@ R_COOL_TIME = 1
 DEGREE_THRESHOLD = 120
 VISIBILITY_THRESHOLD = 0.7
 OPERATION_DISPLAY_TIME = 0.7
+
+
 
 operation_time = 0
 pre_wrist_pos = np.zeros(2)
@@ -21,11 +27,11 @@ def load_start_time_dict(input_start_time_dict):
     start_time_dict = input_start_time_dict
  
 
-def arm_operation(landmark_dict, annotated_frame, appliance_dict, pre_gesture_dict):
+def arm_operation(landmark_dict, annotated_frame, appliance_dict, gesture_dict):
     global start_time_dict
     
-    cv2.putText(annotated_frame, f"Left: {pre_gesture_dict['Left']}", (0, 100), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
-    cv2.putText(annotated_frame, f"Right: {pre_gesture_dict['Right']}", (0, 150), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
+    cv2.putText(annotated_frame, f"Left: {gesture_dict['Left']}", (0, 100), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
+    cv2.putText(annotated_frame, f"Right: {gesture_dict['Right']}", (0, 150), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
         
     if operation_name is not None and (time.time() - operation_time) < OPERATION_DISPLAY_TIME:
         x, y, w, h = appliance_dict[operation_name.split('-')[0]]
@@ -36,14 +42,14 @@ def arm_operation(landmark_dict, annotated_frame, appliance_dict, pre_gesture_di
     if landmark_dict['l_visibility'] > VISIBILITY_THRESHOLD:
         degree = calculate_degree(landmark_dict['l_shoulder'], landmark_dict['l_elbow'], landmark_dict['l_wrist'])
         if degree > DEGREE_THRESHOLD:
-            l_ir_operation(annotated_frame, landmark_dict['l_wrist'], appliance_dict, landmark_dict['l_elbow'], pre_gesture_dict['Left'])
+            l_ir_operation(annotated_frame, landmark_dict['l_wrist'], appliance_dict, landmark_dict['l_elbow'], gesture_dict['Left'])
         else:
             start_time_dict['Left'] = {name : 0 for name in start_time_dict['Left'].keys()}
    
     if landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
         degree = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
         if degree > DEGREE_THRESHOLD:
-            r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'], pre_gesture_dict['Right'])
+            r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'], gesture_dict['Right'])
         else:
             start_time_dict['Left'] = {name : 0 for name in start_time_dict['Left'].keys()}
         
@@ -172,7 +178,7 @@ def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos, r_pre_
             
     cv2.line(annotated_frame, wrist_pos, ex_pos, color, 2)
   
-import ir.irrp as irrp
+
 
 def ir_operation(name, end, hand):
     global operation_time, operation_name
@@ -223,6 +229,83 @@ def cross_detection(pos_a, pos_b, pos_c, pos_d):
         return True
     else:
         return False
+    
+
+def rotate_and_crop(landmark_dict, input_frame, hand):
+
+    wrist = f'{hand}_wrist'
+    elbow = f'{hand}_elbow'
+    shoulder = f'{hand}_shoulder'
+    index = f'{hand}_index'
+    hip = f'{hand}_hip'
+    
+    angle = calculate_degree(landmark_dict[wrist], landmark_dict[shoulder], np.array((0, landmark_dict[shoulder][1])))
+    y_wrist = landmark_dict[wrist][1] 
+    y_elbow = landmark_dict[elbow][1]
+
+    if angle < 90:
+        if y_wrist > y_elbow:
+            angle1 = - 90 - angle
+            angle2 = -angle
+        else:
+            angle1 = angle - 90
+            angle2 = angle
+    else:
+        if y_wrist > y_elbow:
+            angle1 = 270 -angle
+            angle2 = 180 -angle 
+        else:
+            angle1 = angle -90
+            angle2 = angle -180
+
+    center = (int(landmark_dict[index][0]), int(landmark_dict[index][1]))
+    rotate_matrix1 = cv2.getRotationMatrix2D(center=center, angle=angle1, scale=1)
+    rotate_matrix2 = cv2.getRotationMatrix2D(center=center, angle=angle2, scale=1)
+    rotated_frame1 = cv2.warpAffine(src=input_frame, M=rotate_matrix1, dsize=(640*SCALE, 360*SCALE))
+    rotated_frame2 = cv2.warpAffine(src=input_frame, M=rotate_matrix2, dsize=(640*SCALE, 360*SCALE))
+    
+    size = abs(landmark_dict[shoulder][1] - landmark_dict[hip][1])
+    
+    min_y = max(int(landmark_dict[index][1] - RATIO*size) , 0)
+    min_x = max(int(landmark_dict[index][0] - RATIO*size), 0)
+    max_y = int(landmark_dict[index][1] + RATIO*size)
+    max_x = int(landmark_dict[index][0] + RATIO*size)
+    
+    cropped_frame1 = rotated_frame1[min_y : max_y, min_x : max_x]
+    cropped_frame2 = rotated_frame2[min_y : max_y, min_x : max_x]
+    
+    cv2.rectangle(rotated_frame1, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)
+    cv2.rectangle(rotated_frame2, (min_x, min_y), (max_x, max_y), (0, 255, 0), 2)
+    
+    if not(cropped_frame1.shape[0] > 0 and cropped_frame1.shape[1] > 0):
+        cropped_frame1 = np.zeros((360*SCALE, 640*SCALE, 3), dtype=np.uint8)
+    if not(cropped_frame2.shape[0] > 0 and cropped_frame2.shape[1] > 0):
+        cropped_frame2 = np.zeros((360*SCALE, 640*SCALE, 3,), dtype=np.uint8)
+        
+    return rotated_frame1, rotated_frame2, cropped_frame1, cropped_frame2
+
+def concat_rotated_and_cropped(landmark_dict, input_frame):
+    l_rotated_frame1, l_rotated_frame2, l_cropped_frame1, l_cropped_frame2 = rotate_and_crop(landmark_dict, input_frame, 'l')
+    r_rotated_frame1, r_rotated_frame2, r_cropped_frame1, r_cropped_frame2 = rotate_and_crop(landmark_dict, input_frame, 'r')
+    rotated_frame = cv2.hconcat([r_rotated_frame1, r_rotated_frame2, l_rotated_frame1, l_rotated_frame2])
+    
+    diff = l_cropped_frame1.shape[0] - r_cropped_frame1.shape[0]
+    
+    if diff > 0:
+        l_padding1 = l_cropped_frame1
+        l_padding2 = l_cropped_frame2
+        r_padding1 = cv2.copyMakeBorder(r_cropped_frame1, 0, diff, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+        r_padding2 = cv2.copyMakeBorder(r_cropped_frame2, 0, diff, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+    else:
+        l_padding1 = cv2.copyMakeBorder(l_cropped_frame1, 0, -diff, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+        l_padding2 = cv2.copyMakeBorder(l_cropped_frame2, 0, -diff, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+        r_padding1 = r_cropped_frame1
+        r_padding2 = r_cropped_frame2
+        
+    
+    cropped_frame = cv2.hconcat([r_padding1, r_padding2, l_padding1, l_padding2])
+    
+    return rotated_frame, cropped_frame
  
 
     
