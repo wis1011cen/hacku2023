@@ -147,7 +147,7 @@ def ir_operation(name, end, hand):
     operation_name = f'{name}-{end}'
     
     print(operation_name)
-    #irrp.ir_lightning(operation_name)
+    irrp.ir_lightning(operation_name)
 
     operation_time = time.time()
     

@@ -107,7 +107,7 @@ def main():
                 appliance_dict[name] = (x, y, w, h)
                 
     else:
-        appliance_dict = {'tv':(0, 200*SCALE, 100*SCALE, 160*SCALE), 'fan':(550*SCALE, 260*SCALE, 90*SCALE, 100*SCALE)}
+        appliance_dict = {'fan':(0, 200*SCALE, 100*SCALE, 160*SCALE), 'tv':(550*SCALE, 260*SCALE, 90*SCALE, 100*SCALE)}
     
     l_start_time_dict = dict()
     r_start_time_dict = dict()
