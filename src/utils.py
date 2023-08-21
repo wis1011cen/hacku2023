@@ -10,6 +10,9 @@ R_COOL_TIME = 2
 DEGREE_THRESHOLD = 120
 VISIBILITY_THRESHOLD = 0.3
 OPERATION_DISPLAY_TIME = 0.7
+DIFF_THRESHOLD = 50
+MIN_DEGREE = 45
+MAX_DEGREE = 135
 
 operation_time = 0
 pre_wrist_pos = np.zeros(2)
@@ -22,7 +25,7 @@ def load_start_time_dict(input_start_time_dict):
     
  
 def arm_operation(landmark_dict, annotated_frame, appliance_dict):
-    global start_time_dict
+    global start_time_dict, pre_appliance_name 
         
     if operation_name is not None and (time.time() - operation_time) < OPERATION_DISPLAY_TIME:
         x, y, w, h = appliance_dict[operation_name.split('-')[0]]
@@ -34,21 +37,54 @@ def arm_operation(landmark_dict, annotated_frame, appliance_dict):
         degree2 = calculate_degree(landmark_dict['l_elbow'], landmark_dict['l_wrist'], np.array([0, landmark_dict['l_wrist'][1]]))
         if degree1 > DEGREE_THRESHOLD:
             #print(degree2)
-            if degree2 < 45 or degree2 > 135:
+            if degree2 < MIN_DEGREE or degree2 > MAX_DEGREE:
                 l_ir_operation(annotated_frame, landmark_dict['l_wrist'], appliance_dict, landmark_dict['l_elbow'])
         else:
             start_time_dict['Left'] = {name : 0 for name in start_time_dict['Left'].keys()}
    
-    if landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
-        degree1 = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
-        #degree2 = calculate_degree(landmark_dict['r_elbow'], landmark_dict['r_wrist'], np.array([0, landmark_dict['r_wrist'][1]]))
+    # if landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
+    #     degree1 = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
+    #     #degree2 = calculate_degree(landmark_dict['r_elbow'], landmark_dict['r_wrist'], np.array([0, landmark_dict['r_wrist'][1]]))
 
-        if degree1 > DEGREE_THRESHOLD:
+    #     if degree1 > DEGREE_THRESHOLD:
+    #         #if degree2 < 45 or degree2 > 135:
+    #         r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'])
+    #     else:
+    #          start_time_dict['Right'] = {name : 0 for name in start_time_dict['Right'].keys()}
+    #          #print(start_time_dict)
+    
+    degree1 = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
+    degree2 = calculate_degree(landmark_dict['r_elbow'], landmark_dict['r_wrist'], np.array([0, landmark_dict['r_wrist'][1]]))
+
+        # degree = calculate_degree(elbow_pos, wrist_pos, np.array([0, wrist_pos[1]]))
+
+     
+    if degree1 > DEGREE_THRESHOLD and (degree2 < MIN_DEGREE or degree2 > MAX_DEGREE) and landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
+
+
+        #if degree1 > DEGREE_THRESHOLD:
             #if degree2 < 45 or degree2 > 135:
-            r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'])
-        else:
-             start_time_dict['Right'] = {name : 0 for name in start_time_dict['Right'].keys()}
+        r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'])
+    
+    else:
+        start_time_dict['Right'] = {name : 0 for name in start_time_dict['Right'].keys()}
              #print(start_time_dict)
+        
+    if pre_appliance_name is not None:
+        appliance_pos = appliance_dict[pre_appliance_name]
+        ex_pos = landmark_dict['r_wrist'] + 20 * (landmark_dict['r_wrist'] - landmark_dict['r_elbow'])    #腕を伸ばした先
+        diff = abs(landmark_dict['r_wrist'][1]- pre_wrist_pos[1])
+        # print(diff)
+        if not hit_detection(landmark_dict['r_wrist'], ex_pos, appliance_pos) and diff > DIFF_THRESHOLD:
+            if landmark_dict['r_wrist'][1] < pre_wrist_pos[1]:
+                end = 'up'
+            else:
+                end = 'down'
+            
+            ir_operation(pre_appliance_name, end, 'Right')
+            
+            pre_appliance_name = None
+    
          
 
         
@@ -100,13 +136,15 @@ def l_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos):
 # 右腕:チャンネル変更 
 def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos):
     global operation_time, pre_wrist_pos, pre_appliance_name, start_time_dict
-    ex_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
-    color = (255, 0, 0)
+    extended_pos = wrist_pos + 20 * (wrist_pos - elbow_pos)    #腕を伸ばした先
+    # print(degree)
     if (time.time() - operation_time) > R_COOL_TIME or operation_time == 0:
+        # print(degree < 45 or degree > 135)
+        color = (255, 0, 0)
         for appliance_name, appliance_pos in appliance_dict.items():
             color = (255, 0, 0)
             # 線分が交わるか判定
-            if hit_detection(wrist_pos, ex_pos, appliance_pos):
+            if hit_detection(wrist_pos, extended_pos, appliance_pos):
                 if start_time_dict['Right'][appliance_name] == 0:
                     start_time_dict['Right'][appliance_name] = time.time()
                 else:
@@ -130,22 +168,24 @@ def r_ir_operation(annotated_frame, wrist_pos, appliance_dict, elbow_pos):
             else:
                 start_time_dict['Right'][appliance_name] = 0
                 
+        cv2.line(annotated_frame, wrist_pos, extended_pos, color, 2)
+
+                
     # 線分が交わった状態から離れた場合
     #if isinstance(pre_appliance_name, str):
-    if pre_appliance_name is not None:
-        appliance_pos = appliance_dict[pre_appliance_name]
+    # if pre_appliance_name is not None:
+    #     appliance_pos = appliance_dict[pre_appliance_name]
         
-        if not hit_detection(wrist_pos, ex_pos, appliance_pos):
-            if wrist_pos[1] < pre_wrist_pos[1]:
-                end = 'up'
-            else:
-                end = 'down'
+    #     if not hit_detection(wrist_pos, ex_pos, appliance_pos):
+    #         if wrist_pos[1] < pre_wrist_pos[1]:
+    #             end = 'up'
+    #         else:
+    #             end = 'down'
             
-            ir_operation(pre_appliance_name, end, 'Right')
+    #         ir_operation(pre_appliance_name, end, 'Right')
             
-            pre_appliance_name = None
+    #         pre_appliance_name = None
             
-    cv2.line(annotated_frame, wrist_pos, ex_pos, color, 2)
   
 
 def ir_operation(name, end, hand):
@@ -153,7 +193,7 @@ def ir_operation(name, end, hand):
     operation_name = f'{name}-{end}'
     
     print(operation_name)
-    irrp.ir_lightning(operation_name)
+    #irrp.ir_lightning(operation_name)
 
     operation_time = time.time()
     
