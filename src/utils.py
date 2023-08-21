@@ -4,11 +4,11 @@ import time
 import ir.irrp as irrp
 
 L_DURATION = 0.5
-L_COOL_TIME = 1
-R_DURATION = 0.4
-R_COOL_TIME = 0
+L_COOL_TIME = 2
+R_DURATION = 0.5
+R_COOL_TIME = 2
 DEGREE_THRESHOLD = 120
-VISIBILITY_THRESHOLD = 0.6
+VISIBILITY_THRESHOLD = 0.3
 OPERATION_DISPLAY_TIME = 0.7
 
 operation_time = 0
@@ -30,15 +30,21 @@ def arm_operation(landmark_dict, annotated_frame, appliance_dict):
         cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 0, 255), 2)
         
     if landmark_dict['l_visibility'] > VISIBILITY_THRESHOLD:
-        degree = calculate_degree(landmark_dict['l_shoulder'], landmark_dict['l_elbow'], landmark_dict['l_wrist'])
-        if degree > DEGREE_THRESHOLD:
-            l_ir_operation(annotated_frame, landmark_dict['l_wrist'], appliance_dict, landmark_dict['l_elbow'])
+        degree1 = calculate_degree(landmark_dict['l_shoulder'], landmark_dict['l_elbow'], landmark_dict['l_wrist'])
+        degree2 = calculate_degree(landmark_dict['l_elbow'], landmark_dict['l_wrist'], np.array([0, landmark_dict['l_wrist'][1]]))
+        if degree1 > DEGREE_THRESHOLD:
+            #print(degree2)
+            if degree2 < 45 or degree2 > 135:
+                l_ir_operation(annotated_frame, landmark_dict['l_wrist'], appliance_dict, landmark_dict['l_elbow'])
         else:
             start_time_dict['Left'] = {name : 0 for name in start_time_dict['Left'].keys()}
    
     if landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
-        degree = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
-        if degree > DEGREE_THRESHOLD:
+        degree1 = calculate_degree(landmark_dict['r_shoulder'], landmark_dict['r_elbow'], landmark_dict['r_wrist'])
+        #degree2 = calculate_degree(landmark_dict['r_elbow'], landmark_dict['r_wrist'], np.array([0, landmark_dict['r_wrist'][1]]))
+
+        if degree1 > DEGREE_THRESHOLD:
+            #if degree2 < 45 or degree2 > 135:
             r_ir_operation(annotated_frame, landmark_dict['r_wrist'], appliance_dict, landmark_dict['r_elbow'])
         else:
              start_time_dict['Right'] = {name : 0 for name in start_time_dict['Right'].keys()}

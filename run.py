@@ -38,6 +38,8 @@ def pose_detector_callback(result, output_frame, timestamp):
             landmark_dict[landmark_name] = landmark_cordinate
             
             # 11:
+            #landmark_dict['l_visibility'] = min(pose_landmarks[11].visibility, pose_landmarks[13].visibility, pose_landmarks[15].visibility,)
+            #landmark_dict['r_visibility'] = min(pose_landmarks[12].visibility, pose_landmarks[14].visibility, pose_landmarks[16].visibility,)
             landmark_dict['l_visibility'] = pose_landmarks[11].visibility
             landmark_dict['r_visibility'] = pose_landmarks[12].visibility
         
@@ -99,6 +101,7 @@ def main():
             
     # csvファイルから読み込む場合 
     elif args.csv:
+        appliance_dict = dict()
         with open('src/roi.csv') as f:
             reader = csv.reader(f)
             for row in reader:
