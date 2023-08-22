@@ -8,7 +8,7 @@ L_COOL_TIME = 2
 R_DURATION = 0.5
 R_COOL_TIME = 2
 DEGREE_THRESHOLD = 120
-VISIBILITY_THRESHOLD = 0.3
+VISIBILITY_THRESHOLD = 0.5
 OPERATION_DISPLAY_TIME = 0.7
 DIFF_THRESHOLD = 50
 MIN_DEGREE = 45
@@ -57,8 +57,9 @@ def arm_operation(landmark_dict, annotated_frame, appliance_dict):
     degree2 = calculate_degree(landmark_dict['r_elbow'], landmark_dict['r_wrist'], np.array([0, landmark_dict['r_wrist'][1]]))
 
         # degree = calculate_degree(elbow_pos, wrist_pos, np.array([0, wrist_pos[1]]))
+    cv2.putText(annotated_frame,  f"L:{landmark_dict['l_visibility']:.2f}", (0, 50), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(annotated_frame,  f"R:{landmark_dict['r_visibility']:.2f}", (0, 100), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
 
-     
     if degree1 > DEGREE_THRESHOLD and (degree2 < MIN_DEGREE or degree2 > MAX_DEGREE) and landmark_dict['r_visibility'] > VISIBILITY_THRESHOLD:
 
 
@@ -193,7 +194,7 @@ def ir_operation(name, end, hand):
     operation_name = f'{name}-{end}'
     
     print(operation_name)
-    #irrp.ir_lightning(operation_name)
+    irrp.ir_lightning(operation_name)
 
     operation_time = time.time()
     

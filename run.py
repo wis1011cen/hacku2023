@@ -40,8 +40,8 @@ def pose_detector_callback(result, output_frame, timestamp):
             # 11:
             #landmark_dict['l_visibility'] = min(pose_landmarks[11].visibility, pose_landmarks[13].visibility, pose_landmarks[15].visibility,)
             #landmark_dict['r_visibility'] = min(pose_landmarks[12].visibility, pose_landmarks[14].visibility, pose_landmarks[16].visibility,)
-            landmark_dict['l_visibility'] = pose_landmarks[11].visibility
-            landmark_dict['r_visibility'] = pose_landmarks[12].visibility
+            landmark_dict['l_visibility'] = pose_landmarks[15].visibility
+            landmark_dict['r_visibility'] = pose_landmarks[16].visibility
         
         utils.arm_operation(landmark_dict, annotated_frame, appliance_dict)
             
@@ -58,13 +58,18 @@ def main():
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--set', action='store_true')
-    parser.add_argument('--csv', action='store_true') 
+    #parser.add_argument('--csv', action='store_true') 
     args = parser.parse_args()
     
-    SCALE = 1
+    SCALE = 2
     WIDTH = 640*SCALE
     HEIGHT = 360*SCALE
     
+    
+    
+    #codec = cv2.VideoWriter_fourcc(*'mp4v')
+    #video = cv2.VideoWriter('video.mp4', codec, 10, (WIDTH*2, HEIGHT))
+    #video2 = cv2.VideoWriter('video2.mp4', codec, 10, (WIDTH, HEIGHT))
     
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -100,7 +105,7 @@ def main():
             writer.writerows(appliance_list)
             
     # csvファイルから読み込む場合 
-    elif args.csv:
+    else:
         appliance_dict = dict()
         with open('src/roi.csv') as f:
             reader = csv.reader(f)
@@ -109,8 +114,8 @@ def main():
                 x, y, w, h = map(int, row[1:])
                 appliance_dict[name] = (x, y, w, h)
                 
-    else:
-        appliance_dict = {'fan':(0, 200*SCALE, 100*SCALE, 160*SCALE), 'tv':(550*SCALE, 260*SCALE, 90*SCALE, 100*SCALE)}
+    #else:
+        #appliance_dict = {'fan':(0, 200*SCALE, 100*SCALE, 160*SCALE), 'tv':(550*SCALE, 260*SCALE, 90*SCALE, 100*SCALE)}
     
     l_start_time_dict = dict()
     r_start_time_dict = dict()
@@ -155,7 +160,10 @@ def main():
         # for name, (x, y, w, h) in appliance_dict.items():
         #     cv2.putText(annotated_frame, name, (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
         #     cv2.rectangle(annotated_frame, (x, y),(x+w, y+h), (0, 255, 0), 2)
-
+        
+        #concat = cv2.hconcat([annotated_frame, frame])
+        #video.write(concat)
+        #video2.write(frame)
         cv2.imshow('Video', annotated_frame)
         
         key = cv2.waitKey(1)
@@ -165,6 +173,8 @@ def main():
         
     cap.release()
     cv2.destroyAllWindows()
+    video.release()
+    #video2.release()
     
 if __name__ == '__main__':
     main()
